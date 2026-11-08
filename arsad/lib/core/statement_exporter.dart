@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:excel/excel.dart';
+import 'package:excel/excel.dart' hide TextSpan;
 import 'package:flutter/material.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -25,7 +25,7 @@ class StatementExporter {
       }
       final doc=pw.Document();
       for(final pageImage in pages){
-        doc.addPage(pw.Page(pageFormat:const pw.PdfPageFormat(595,842,marginAll:18),build:(_)=>pw.Center(child:pw.Image(pageImage,fit:pw.BoxFit.contain))));
+        doc.addPage(pw.Page(build:(_)=>pw.Center(child:pw.Image(pageImage,fit:pw.BoxFit.contain))));
       }
       await Share.shareXFiles([XFile.fromData(await doc.save(),mimeType:'application/pdf',name:'arsad-statement.pdf')],text:title);
     } else {
