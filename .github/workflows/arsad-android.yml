@@ -26,7 +26,7 @@ jobs:
       - name: Configure Android compile SDK 36
         working-directory: arsad
         run: |
-          yes | sdkmanager --install "platforms;android-36"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-36"
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -45,7 +45,10 @@ jobs:
           import re
           p=Path('android/app/src/main/AndroidManifest.xml')
           s=p.read_text(encoding='utf-8')
-          s=re.sub(r'\s*<uses-permission[^>]*android:name="android.permission.INTERNET"[^>]*/>', '', s)
+          s=re.sub(r'\s*<uses-permission(?=[^>]*android:name="android.permission.INTERNET")(?![^>]*tools:node="remove")[^>]*/>', '', s)
+          if 'tools:node="remove"' not in s:
+              s=s.replace('xmlns:android="http://schemas.android.com/apk/res/android"', 'xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"')
+              s=s.replace('<uses-feature', '<uses-permission android:name="android.permission.INTERNET" tools:node="remove" />\n    <uses-feature', 1)
           p.write_text(s, encoding='utf-8')
           PY
       - name: Resolve dependencies
@@ -60,6 +63,17 @@ jobs:
       - name: Build release APK
         working-directory: arsad
         run: flutter build apk --release
+      - name: Verify APK has no INTERNET permission
+        working-directory: arsad
+        run: |
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)
+          "$AAPT" dump permissions build/app/outputs/flutter-apk/app-release.apk > /tmp/arsad-permissions.txt
+          if grep -q "android.permission.INTERNET" /tmp/arsad-permissions.txt; then
+            cat /tmp/arsad-permissions.txt
+            echo "INTERNET permission found in APK"
+            exit 1
+          fi
+          echo "Verified: INTERNET permission is absent"
       - uses: actions/upload-artifact@v4
         with:
           name: arsad-release-apk
