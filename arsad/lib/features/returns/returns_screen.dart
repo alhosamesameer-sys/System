@@ -166,7 +166,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
                     const SizedBox(height:3),
                     Text(returned?'مكتملة':'اختيار',style:TextStyle(fontSize:11,color:returned?theme.colorScheme.error:theme.colorScheme.primary)),
                   ]),
-                  onTap:()=>selectInvoice(row),
+                  onTap:returned?null:()=>selectInvoice(row),
                 ),
               );
             },
