@@ -37,7 +37,7 @@ class _PrinterScreenState extends State<PrinterScreen> {
 
   Future<void> testPrint() async {
     if(selected==null)throw Exception('اختر طابعة مقترنة أولاً');
-    final bytes=<int>[0x1B,0x40,...'ARSAD - TEST PRINT\\nBluetooth ESC/POS\\nPaper: $paper mm\\n\\n'.codeUnits,0x1D,0x56,0x41,0x03];
+    final bytes=<int>[0x1B,0x40,...'ARSAD - TEST PRINT\nBluetooth ESC/POS\nPaper: $paper mm\n\n'.codeUnits,0x1D,0x56,0x41,0x03];
     await ThermalPrinterService.printBytes(address:selected!,bytes:bytes);
     if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم إرسال صفحة الاختبار إلى الطابعة')));
   }
