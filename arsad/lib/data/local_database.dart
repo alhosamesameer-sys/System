@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -29,6 +31,7 @@ class LocalDatabase {
         await db.insert('store_settings', {'id': 1, 'store_name': 'متجري'});
         await db.insert('app_settings', {'key': 'stock_enabled', 'value': 'false'});
       });
+    await ensureDefaultUser();
     await ensureDefaultUser();
     return _db!;
   }
@@ -63,7 +66,33 @@ class LocalDatabase {
     await (await database).update('users',{'password_hash':passwordHash(password)},where:'id=1');
     await (await database).insert('app_settings',{'key':'must_change_password','value':'false'},conflictAlgorithm:ConflictAlgorithm.replace);
   }
-  Future<bool> hasUser() async => (Sqflite.firstIntValue(await (await database).rawQuery('SELECT COUNT(*) FROM users')) ?? 0)>0;
+  String passwordHash(String password) {
+    var bytes = utf8.encode('ARSAD-local-v1-7c9d:$password');
+    for (var i = 0; i < 12000; i++) { bytes = sha256.convert(bytes).bytes; }
+    return base64UrlEncode(bytes);
+  }
+
+  Future<void> ensureDefaultUser() async {
+    final db = _db!;
+    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM users')) ?? 0;
+    if (count == 0) {
+      await db.insert('users', {'username':'sameer','password_hash':passwordHash('123456'),'created_at':DateTime.now().toIso8601String()});
+      await db.insert('app_settings', {'key':'must_change_password','value':'true'}, conflictAlgorithm:ConflictAlgorithm.replace);
+    }
+  }
+
+  Future<bool> verifyLogin(String username, String password) async {
+    final rows = await (await database).query('users', where:'username=? AND password_hash=?', whereArgs:[username.trim(),passwordHash(password)], limit:1);
+    return rows.isNotEmpty;
+  }
+
+  Future<void> changePassword(String password) async {
+    final db = await database;
+    await db.update('users', {'password_hash':passwordHash(password)}, where:'id=1');
+    await db.insert('app_settings', {'key':'must_change_password','value':'false'}, conflictAlgorithm:ConflictAlgorithm.replace);
+  }
+
+  Future<bool> hasUser() async => (Sqflite.firstIntValue(await (await database).rawQuery('SELECT COUNT(*) FROM users')) ?? 0) > 0;
 
   Future<int> balance(String table) async {
     if (!{'cash_transactions','network_transactions'}.contains(table)) throw ArgumentError('Unsupported account');
