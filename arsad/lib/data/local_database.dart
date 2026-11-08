@@ -153,8 +153,45 @@ class LocalDatabase {
     });
   }
 
+  Future<void> createAccountMovement({required String table,required String type,required int amountHalalas,required String note}) async {
+    if(!{'cash_transactions','network_transactions'}.contains(table)) throw ArgumentError('Unsupported account');
+    if(!{'opening','deposit','withdrawal','expense','bank_fee','adjustment_in','adjustment_out'}.contains(type)) throw ArgumentError('Unsupported movement');
+    if(amountHalalas<=0) throw Exception('المبلغ يجب أن يكون أكبر من صفر');
+    final db=await database;
+    await db.transaction((txn) async {
+      final currentRows=await txn.rawQuery("SELECT COALESCE(SUM(CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END),0) AS balance FROM $table");
+      final current=(currentRows.first['balance'] as num).toInt();
+      if(type=='opening') {
+        final count=Sqflite.firstIntValue(await txn.rawQuery('SELECT COUNT(*) FROM $table'))??0;
+        if(count>0) throw Exception('تم تسجيل رصيد افتتاحي لهذا الحساب مسبقاً');
+      } else if({'withdrawal','expense','bank_fee','adjustment_out'}.contains(type) && amountHalalas>current) {
+        throw Exception('الرصيد غير كافٍ');
+      }
+      final now=DateTime.now().toIso8601String();
+      final movementId=await txn.insert(table,{'created_at':now,'type':type,'amount_halalas':amountHalalas,'note':note});
+      if(type=='expense'||type=='bank_fee') {
+        await txn.insert('expenses',{'created_at':now,'title':note.trim().isEmpty?(type=='bank_fee'?'رسوم بنكية':'مصروف'):note,'amount_halalas':amountHalalas,'account':table=='cash_transactions'?'cash':'network','note':note,'transaction_id':movementId});
+      }
+    });
+  }
+
   Future<Map<String,Object?>> dashboardTotals(DateTime start,DateTime end) async {
-    final rows=await (await database).rawQuery("SELECT COUNT(*) AS invoice_count, COALESCE(SUM(total_halalas),0) AS sales_total, COALESCE(SUM(CASE WHEN payment_method='cash' THEN total_halalas ELSE 0 END),0) AS cash_total, COALESCE(SUM(CASE WHEN payment_method='network' THEN total_halalas ELSE 0 END),0) AS network_total FROM invoices WHERE created_at>=? AND created_at<?",[start.toIso8601String(),end.toIso8601String()]);
-    return rows.first;
+    final db=await database;
+    final args=[start.toIso8601String(),end.toIso8601String()];
+    final sales=await db.rawQuery("SELECT COUNT(*) AS invoice_count,COALESCE(SUM(total_halalas),0) AS sales_total,COALESCE(SUM(CASE WHEN payment_method='cash' THEN total_halalas ELSE 0 END),0) AS cash_total,COALESCE(SUM(CASE WHEN payment_method='network' THEN total_halalas ELSE 0 END),0) AS network_total FROM invoices WHERE created_at>=? AND created_at<?",args);
+    final returned=await db.rawQuery('SELECT COALESCE(SUM(total_halalas),0) AS returns_total FROM returns WHERE created_at>=? AND created_at<?',args);
+    final expenses=await db.rawQuery('SELECT COALESCE(SUM(amount_halalas),0) AS expenses_total FROM expenses WHERE created_at>=? AND created_at<?',args);
+    final cash=await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END),0) AS net FROM cash_transactions WHERE created_at>=? AND created_at<?",args);
+    final network=await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END),0) AS net FROM network_transactions WHERE created_at>=? AND created_at<?",args);
+    final gross=(sales.first['sales_total'] as num).toInt();
+    final ret=(returned.first['returns_total'] as num).toInt();
+    return {
+      ...sales.first,
+      'returns_total':ret,
+      'net_sales_total':gross-ret,
+      'expenses_total':(expenses.first['expenses_total'] as num).toInt(),
+      'cash_net':(cash.first['net'] as num).toInt(),
+      'network_net':(network.first['net'] as num).toInt(),
+    };
   }
 }
