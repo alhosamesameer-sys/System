@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../../data/local_database.dart';
 import '../dashboard/dashboard_screen.dart';
 
@@ -9,13 +10,25 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
  final username=TextEditingController(text:'sameer');
  final password=TextEditingController();
- String? error; bool busy=false; bool obscure=true;
+ String? error; bool busy=false; bool obscure=true; bool remember=true;
+ @override void initState(){super.initState();loadRememberedUser();}
+ Future<void> loadRememberedUser() async {
+  final db=await LocalDatabase.instance.database;
+  final rows=await db.query('app_settings',where:'key=?',whereArgs:['remembered_username']);
+  if(rows.isNotEmpty&&mounted){username.text=rows.first['value'] as String;setState(()=>remember=true);}
+ }
+ Future<void> saveRememberedUser() async {
+  final db=await LocalDatabase.instance.database;
+  if(remember){await db.insert('app_settings',{'key':'remembered_username','value':username.text.trim()},conflictAlgorithm:ConflictAlgorithm.replace);}
+  else{await db.delete('app_settings',where:'key=?',whereArgs:['remembered_username']);}
+ }
  Future<void> submit() async {
   if(busy)return;
   setState(()=>busy=true);
   try {
    final ok=await LocalDatabase.instance.verifyLogin(username.text,password.text);
    if(!ok){setState(()=>error='اسم المستخدم أو كلمة المرور غير صحيحة');return;}
+   await saveRememberedUser();
    if(!mounted)return;
    Navigator.pushReplacement(context,MaterialPageRoute(builder:(_)=>const DashboardScreen()));
   } catch(e){setState(()=>error='تعذر تسجيل الدخول: $e');}
@@ -30,6 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
  TextField(controller:username,decoration:const InputDecoration(labelText:'اسم المستخدم',prefixIcon:Icon(Icons.person))),
  const SizedBox(height:12),
  TextField(controller:password,obscureText:obscure,onSubmitted:(_)=>submit(),decoration:InputDecoration(labelText:'كلمة المرور',prefixIcon:const Icon(Icons.lock),suffixIcon:IconButton(onPressed:()=>setState(()=>obscure=!obscure),icon:Icon(obscure?Icons.visibility:Icons.visibility_off)))),
+ CheckboxListTile(contentPadding:EdgeInsets.zero,value:remember,onChanged:(v)=>setState(()=>remember=v??false),title:const Text('تذكر اسم المستخدم')),
  if(error!=null) Padding(padding:const EdgeInsets.all(8),child:Text(error!,style:const TextStyle(color:Colors.red))),
  SizedBox(width:double.infinity,child:FilledButton(onPressed:busy?null:submit,child:Text(busy?'جارٍ الدخول...':'دخول'))),
  const SizedBox(height:16),const Text('الدخول الافتراضي: sameer / 123456',style:TextStyle(color:Colors.grey)),
