@@ -11,7 +11,7 @@ class LocalDatabase {
   Future<Database> get database async {
     if (_db != null) return _db!;
     final root = await getDatabasesPath();
-    _db = await openDatabase(p.join(root, 'arsad_local.db'), version: 1,
+    _db = await openDatabase(p.join(root, 'arsad_local.db'), version: 2,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute('CREATE TABLE users(id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)');
@@ -25,11 +25,14 @@ class LocalDatabase {
         await db.execute('CREATE TABLE return_items(id INTEGER PRIMARY KEY AUTOINCREMENT, return_id INTEGER NOT NULL REFERENCES returns(id), invoice_item_id INTEGER NOT NULL REFERENCES invoice_items(id), quantity REAL NOT NULL, amount_halalas INTEGER NOT NULL)');
         await db.execute('CREATE TABLE cash_transactions(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, type TEXT NOT NULL, amount_halalas INTEGER NOT NULL, reference_type TEXT, reference_id INTEGER, note TEXT)');
         await db.execute('CREATE TABLE network_transactions(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, type TEXT NOT NULL, amount_halalas INTEGER NOT NULL, reference_type TEXT, reference_id INTEGER, note TEXT)');
-        await db.execute("CREATE TABLE expenses(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, amount_halalas INTEGER NOT NULL, account TEXT NOT NULL CHECK(account IN ('cash','network')), note TEXT)");
+        await db.execute("CREATE TABLE expenses(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, title TEXT NOT NULL, amount_halalas INTEGER NOT NULL, account TEXT NOT NULL CHECK(account IN ('cash','network')), note TEXT, transaction_id INTEGER)");
         await db.execute('CREATE TABLE stock_movements(id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL REFERENCES products(id), created_at TEXT NOT NULL, type TEXT NOT NULL, quantity REAL NOT NULL, reference_type TEXT, reference_id INTEGER)');
         await db.execute('CREATE TABLE app_settings(key TEXT PRIMARY KEY, value TEXT NOT NULL)');
         await db.insert('store_settings', {'id':1,'store_name':'متجري'});
         await db.insert('app_settings', {'key':'stock_enabled','value':'false'});
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if(oldVersion<2) await db.execute('ALTER TABLE expenses ADD COLUMN transaction_id INTEGER');
       });
     await ensureDefaultUser();
     return _db!;
