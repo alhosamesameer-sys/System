@@ -27,7 +27,7 @@ class InvoiceDetailScreen extends StatelessWidget {
       pw.Text('ARSAD • فاتورة رقم: ${inv['invoice_no']}'),
       pw.Text('التاريخ: ${inv['created_at']}'),
       pw.Divider(),
-      ...lines.map((x)=>pw.Text('${x['product_name']}  × ${x['quantity']}  = ${Money.format(x['line_total_halalas'] as int)}')),
+      ...lines.map((x)=>pw.Text('${x['product_name']}  × ${x['quantity']}  | الوحدة: ${Money.format(x['unit_price_halalas'] as int)}  | الإجمالي: ${Money.format(x['line_total_halalas'] as int)}')),
       pw.Divider(),
       pw.Text('الإجمالي: ${Money.format(inv['total_halalas'] as int)}'),
       pw.Text('الدفع: ${inv['payment_method']=='cash'?'نقد':'شبكة'}'),
@@ -43,7 +43,7 @@ class InvoiceDetailScreen extends StatelessWidget {
       store['store_name'] as String,
       'فاتورة رقم: ${inv['invoice_no']}',
       'التاريخ: ${inv['created_at']}',
-      ...lines.map((x)=>'${x['product_name']} × ${x['quantity']} — ${Money.format(x['line_total_halalas'] as int)}'),
+      ...lines.map((x)=>'${x['product_name']} × ${x['quantity']} — سعر الوحدة: ${Money.format(x['unit_price_halalas'] as int)} — الإجمالي: ${Money.format(x['line_total_halalas'] as int)}'),
       'الإجمالي: ${Money.format(inv['total_halalas'] as int)}',
       'طريقة الدفع: ${inv['payment_method']=='cash'?'نقد':'شبكة'}',
     ].join('\n');
@@ -87,7 +87,7 @@ class InvoiceDetailScreen extends StatelessWidget {
       final lines=snapshot.data!['items'] as List<Map<String,Object?>>;
       return ListView(padding:const EdgeInsets.all(16),children:[
         Text('فاتورة ${inv['invoice_no']}'),
-        ...lines.map((x)=>ListTile(title:Text(x['product_name'] as String),subtitle:Text('الكمية: ${x['quantity']}'),trailing:Text(Money.format(x['line_total_halalas'] as int)))),
+        ...lines.map((x)=>ListTile(title:Text(x['product_name'] as String),subtitle:Text('الكمية: ${x['quantity']} • سعر الوحدة: ${Money.format(x['unit_price_halalas'] as int)}'),trailing:Text(Money.format(x['line_total_halalas'] as int)))),
         Text('الإجمالي: ${Money.format(inv['total_halalas'] as int)}'),
         FilledButton.icon(onPressed:()=>printInvoice(snapshot.data!),icon:const Icon(Icons.print),label:const Text('طباعة / PDF')),
         OutlinedButton.icon(onPressed:()=>shareInvoice(snapshot.data!),icon:const Icon(Icons.share),label:const Text('مشاركة الفاتورة')),
