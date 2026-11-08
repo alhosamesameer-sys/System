@@ -9,7 +9,7 @@ class ProductsScreen extends StatefulWidget {
 }
 class _ProductsScreenState extends State<ProductsScreen> {
   final search=TextEditingController();
-  Future<List<Map<String,Object?>>> load() async => (await LocalDatabase.instance.database).query('products',where:'is_active=1 AND (name LIKE ? OR barcode LIKE ?)',whereArgs:['%$${search.text}%','%$${search.text}%'],orderBy:'name');
+  Future<List<Map<String,Object?>>> load() async => (await LocalDatabase.instance.database).query('products',where:'is_active=1 AND (name LIKE ? OR barcode LIKE ?)',whereArgs:['%'+search.text+'%','%'+search.text+'%'],orderBy:'name');
 
   Future<String?> scanCode() => Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>const BarcodeScreen()));
 
