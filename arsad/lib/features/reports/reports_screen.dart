@@ -15,12 +15,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   DateTimeRange get range {
     final now = DateTime.now();
-    if (custom != null) return DateTimeRange(
-      start: DateTime(custom!.start.year, custom!.start.month, custom!.start.day),
-      end: DateTime(custom!.end.year, custom!.end.month, custom!.end.day + 1),
-    );
+    if (custom != null) {
+      return DateTimeRange(
+        start: DateTime(custom!.start.year, custom!.start.month, custom!.start.day),
+        end: DateTime(custom!.end.year, custom!.end.month, custom!.end.day + 1),
+      );
+    }
     if (period == 'شهري') { return DateTimeRange(start: DateTime(now.year, now.month), end: DateTime(now.year, now.month + 1)); }
-    if (period == 'سنوي') return DateTimeRange(start: DateTime(now.year), end: DateTime(now.year + 1));
+    if (period == 'سنوي') {
+      return DateTimeRange(start: DateTime(now.year), end: DateTime(now.year + 1));
+    }
     if (period == 'أسبوعي') {
       final start = DateTime(now.year, now.month, now.day - now.weekday + 1);
       return DateTimeRange(start: start, end: start.add(const Duration(days: 7)));
@@ -61,7 +65,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> openStatement(String title, String kind) async {
     final rows = await detail(kind);
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     if (rows.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد تفاصيل في هذه الفترة')));
       return;
@@ -135,7 +141,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           final selected = await showDateRangePicker(
             context: context, firstDate: DateTime(2020), lastDate: DateTime(now.year + 2), initialDateRange: range,
           );
-          if (selected != null && mounted) setState(() => custom = selected);
+          if (selected != null && mounted) {
+            setState(() => custom = selected);
+          }
         },
         icon: const Icon(Icons.date_range),
         label: const Text('فترة مخصصة'),
@@ -144,10 +152,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
         child: FutureBuilder<Map<String, Object?>>(
           future: LocalDatabase.instance.dashboardTotals(range.start, range.end),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError) return const Center(child: Text('تعذر تحميل التقرير'));
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return const Center(child: Text('تعذر تحميل التقرير'));
+            }
             final data = snapshot.data;
-            if (data == null) return const SizedBox.shrink();
+            if (data == null) {
+              return const SizedBox.shrink();
+            }
             return ListView(padding: const EdgeInsets.all(14), children: [
               const Text('ملخص الأداء', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
               _metric('إجمالي المبيعات', data['sales_total'], Icons.point_of_sale, Colors.blue, 'sales'),
