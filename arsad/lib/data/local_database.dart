@@ -188,11 +188,11 @@ class LocalDatabase {
   Future<Map<String,Object?>> dashboardTotals(DateTime start,DateTime end) async {
     final db=await database;
     final args=[start.toIso8601String(),end.toIso8601String()];
-    final sales=await db.rawQuery("SELECT COUNT(*) AS invoice_count,COALESCE(SUM(total_halalas),0) AS sales_total,COALESCE(SUM(CASE WHEN payment_method='cash' THEN total_halalas ELSE 0 END),0) AS cash_total,COALESCE(SUM(CASE WHEN payment_method='network' THEN total_halalas ELSE 0 END),0) AS network_total FROM invoices WHERE created_at>=? AND created_at<?",args);
-    final returned=await db.rawQuery('SELECT COALESCE(SUM(total_halalas),0) AS returns_total FROM returns WHERE created_at>=? AND created_at<?',args);
-    final expenses=await db.rawQuery('SELECT COALESCE(SUM(amount_halalas),0) AS expenses_total FROM expenses WHERE created_at>=? AND created_at<?',args);
-    final cash=await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END),0) AS net FROM cash_transactions WHERE created_at>=? AND created_at<?",args);
-    final network=await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END),0) AS net FROM network_transactions WHERE created_at>=? AND created_at<?",args);
+    final sales=await db.rawQuery("SELECT COUNT(*) AS invoice_count,COALESCE(SUM(total_halalas),0) AS sales_total,COALESCE(SUM(CASE WHEN payment_method='cash' THEN total_halalas ELSE 0 END),0) AS cash_total,COALESCE(SUM(CASE WHEN payment_method='network' THEN total_halalas ELSE 0 END),0) AS network_total FROM invoices WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?)",args);
+    final returned=await db.rawQuery('SELECT COALESCE(SUM(total_halalas),0) AS returns_total FROM returns WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?)',args);
+    final expenses=await db.rawQuery('SELECT COALESCE(SUM(amount_halalas),0) AS expenses_total FROM expenses WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?)',args);
+    final cash=await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END),0) AS net FROM cash_transactions WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?)",args);
+    final network=await db.rawQuery("SELECT COALESCE(SUM(CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END),0) AS net FROM network_transactions WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?)",args);
     final gross=(sales.first['sales_total'] as num).toInt();
     final ret=(returned.first['returns_total'] as num).toInt();
     return {
