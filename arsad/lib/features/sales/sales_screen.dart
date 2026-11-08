@@ -15,7 +15,7 @@ class _SalesScreenState extends State<SalesScreen> {
 
   Future<List<Map<String,Object?>>> products() async {
     final db=await LocalDatabase.instance.database;
-    return db.query('products',where:'is_active=1 AND (name LIKE ? OR barcode LIKE ?)',whereArgs:['%'+search.text+'%','%'+search.text+'%'],orderBy:'name',limit:40);
+    return db.query('products',where:'is_active=1 AND (name LIKE ? OR barcode LIKE ?)',whereArgs:['%${search.text}%','%${search.text}%'],orderBy:'name',limit:40);
   }
   int lineTotal(Map<String,Object?> item)=>(item['sale_price_halalas'] as int)*(item['qty'] as int);
   int get total=>cart.values.fold(0,(sum,item)=>sum+lineTotal(item));
