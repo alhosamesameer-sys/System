@@ -27,7 +27,7 @@ class _SalesScreenState extends State<SalesScreen> {
   }
   Future<void> scan() async {
     final code = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => const BarcodeScreen()));
-    if (code != null && mounted) { search.text = code; setState(() {}); }
+    if (code != null && mounted) {\n      final db=await LocalDatabase.instance.database;\n      final found=await db.query('products',where:'barcode=? AND is_active=1',whereArgs:[code],limit:1);\n      if(!mounted)return;\n      if(found.isNotEmpty){add(found.first);}else{search.text=code;setState((){});}\n    }
   }
   Future<void> editPrice(int id) async {
     final item=cart[id]; if(item==null)return;
@@ -55,7 +55,7 @@ class _SalesScreenState extends State<SalesScreen> {
       Padding(padding:const EdgeInsets.all(12),child:TextField(controller:search,onChanged:(_) => setState(() {}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'ابحث أو امسح الباركود'))),
       SizedBox(height:160,child:FutureBuilder<List<Map<String,Object?>>>(future:products(),builder:(context,snapshot){
         if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
-        return ListView(children:snapshot.data!.map((product)=>ListTile(title:Text(product['name'] as String),subtitle:Text(Money.format(product['sale_price_halalas'] as int)),trailing:IconButton(icon:const Icon(Icons.add_circle,color:Colors.blue),onPressed:()=>add(product))).toList());
+        return ListView.builder(itemCount:snapshot.data!.length,itemBuilder:(context,index){final product=snapshot.data![index];return ListTile(title:Text(product['name'] as String),subtitle:Text(Money.format(product['sale_price_halalas'] as int)),trailing:IconButton(icon:const Icon(Icons.add_circle,color:Colors.blue),onPressed:()=>add(product)));});
       })),
       const Divider(),
       Expanded(child:ListView(children:cart.entries.map((entry)=>ListTile(
