@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/money.dart';
 import '../../data/local_database.dart';
 
@@ -16,6 +18,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if(period=='سنوي')return DateTimeRange(start:DateTime(now.year),end:DateTime(now.year+1));
     if(period=='أسبوعي')return DateTimeRange(start:DateTime(now.year,now.month,now.day-(now.weekday-1)),end:DateTime(now.year,now.month,now.day-(now.weekday-1)+7));
     return DateTimeRange(start:DateTime(now.year,now.month,now.day),end:DateTime(now.year,now.month,now.day+1));
+  }
+  Future<void> shareReport(Map<String,Object?> d) async {
+    final lines=<String>[
+      'تقرير أرصد',
+      'من: ${dates.start.toIso8601String()}',
+      'إلى: ${dates.end.subtract(const Duration(days:1)).toIso8601String()}',
+      'إجمالي المبيعات,${d['sales_total']}',
+      'المبيعات النقدية,${d['cash_total']}',
+      'مبيعات الشبكة,${d['network_total']}',
+      'المردودات,${d['returns_total']}',
+      'صافي المبيعات,${d['net_sales_total']}',
+      'عدد الفواتير,${d['invoice_count']}',
+      'المصروفات,${d['expenses_total']}',
+      'صافي حركة الصندوق,${d['cash_net']}',
+      'صافي حركة الشبكة,${d['network_net']}',
+    ];
+    await Share.shareXFiles([XFile.fromData(utf8.encode(lines.join('\\n')),mimeType:'text/csv',name:'arsad-report.csv')],text:'تقرير أرصد');
   }
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('التقارير')),
@@ -42,6 +61,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           _row('المصروفات',d['expenses_total']),
           _row('صافي حركة الصندوق',d['cash_net']),
           _row('صافي حركة الشبكة',d['network_net']),
+          const SizedBox(height:12),
+          FilledButton.icon(onPressed:()=>shareReport(d),icon:const Icon(Icons.share),label:const Text('مشاركة التقرير CSV')),
         ]);
       })),
     ]),
