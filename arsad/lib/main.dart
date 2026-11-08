@@ -12,23 +12,24 @@ Future<void> main() async {
 
 class ArsadApp extends StatelessWidget {
   const ArsadApp({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'أرصد | ARSAD',
-      debugShowCheckedModeBanner: false,
-      theme: ArsadTheme.light,
-      locale: const Locale('ar'),
-      home: FutureBuilder<bool>(
-        future: LocalDatabase.instance.hasUser(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          return snapshot.data == true ? const DashboardScreen() : const LoginScreen();
-        },
-      ),
-    );
-  }
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'أرصد | ARSAD',
+    debugShowCheckedModeBanner: false,
+    theme: ArsadTheme.light,
+    locale: const Locale('ar'),
+    builder: (context, child) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: child ?? const SizedBox.shrink(),
+    ),
+    home: FutureBuilder<bool>(
+      future: LocalDatabase.instance.hasUser(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        return snapshot.data == true ? const LoginScreen() : const LoginScreen();
+      },
+    ),
+  );
 }
