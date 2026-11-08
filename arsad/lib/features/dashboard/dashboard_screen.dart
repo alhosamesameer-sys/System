@@ -42,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const Text('مرحباً بك في أرصد',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),
         const SizedBox(height:12),
         GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:2,childAspectRatio:1.7,crossAxisSpacing:8,mainAxisSpacing:8,children:[
-          _metric('مبيعات اليوم',Money.format((d['net_sales_total'] as num).toInt()),Icons.trending_up,Colors.green),
+          _metric('مبيعات اليوم',Money.format((d['sales_total'] as num).toInt()),Icons.trending_up,Colors.green),
           _metric('عدد الفواتير','${d['invoice_count']}',Icons.receipt,Colors.blue),
           _metric('الصندوق',Money.format((d['cash_balance'] as num).toInt()),Icons.payments,Colors.green),
           _metric('حساب الشبكة',Money.format((d['network_balance'] as num).toInt()),Icons.credit_card,Colors.blue),
