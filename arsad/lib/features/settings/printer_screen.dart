@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import '../../core/thermal_printer.dart';
 import '../../data/local_database.dart';
 
