@@ -23,45 +23,66 @@ jobs:
           if [ ! -f android/settings.gradle ] && [ ! -f android/settings.gradle.kts ]; then
             flutter create --platforms=android --org com.arsad --project-name arsad .
           fi
+      - name: Resolve dependencies
+        working-directory: arsad
+        run: flutter pub get
       - name: Configure Android compile SDK 36 for app and plugins
         working-directory: arsad
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-36"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-36" || true
           python3 - <<'PY'
           from pathlib import Path
+          import json
           import re
-          root = Path('android')
-          files = list(root.rglob('build.gradle')) + list(root.rglob('build.gradle.kts'))
-          if not files:
-              raise SystemExit('No Android Gradle build files found')
+
+          root = Path("android")
+          targets = set(root.rglob("build.gradle")) | set(root.rglob("build.gradle.kts"))
+          metadata = Path(".flutter-plugins-dependencies")
+          if metadata.exists():
+              data = json.loads(metadata.read_text(encoding="utf-8"))
+              for plugin in data.get("plugins", {}).get("android", []):
+                  plugin_android = Path(plugin["path"]) / "android"
+                  if plugin_android.exists():
+                      targets.update(plugin_android.rglob("build.gradle"))
+                      targets.update(plugin_android.rglob("build.gradle.kts"))
+
+          if not targets:
+              raise SystemExit("No Android Gradle build files found")
+
           changed = []
-          for p in files:
-              s = p.read_text(encoding='utf-8')
-              original = s
-              # Flutter app and Flutter plugin projects can each set their own compile SDK.
-              s = re.sub(r'compileSdkVersion\s+flutter\.compileSdkVersion', 'compileSdkVersion 36', s)
-          s = re.sub(r'compileSdk\s+flutter\.compileSdkVersion', 'compileSdk 36', s)
-              s = re.sub(r'compileSdkVersion\s+\(?\s*34\s*\)?', 'compileSdkVersion 36', s)
-          s = re.sub(r'compileSdk\s+\(?\s*34\s*\)?', 'compileSdk 36', s)
-              s = re.sub(r'compileSdk\s*=\s*flutter\.compileSdkVersion', 'compileSdk = 36', s)
-              s = re.sub(r'compileSdk\s*=\s*34\b', 'compileSdk = 36', s)
-              if p.name == 'build.gradle.kts' and p.parent.name == 'app' and 'compileSdk = 36' not in s:
-                  if re.search(r'compileSdk\s*=', s):
-                      s = re.sub(r'compileSdk\s*=\s*[^\n]+', 'compileSdk = 36', s, count=1)
+          unresolved = []
+          for path in sorted(targets):
+              source = path.read_text(encoding="utf-8")
+              updated = source
+              # Normalize Groovy and Kotlin DSL declarations, including Flutter defaults.
+              updated = re.sub(
+                  r"(?m)^(\s*)compileSdkVersion\s+[^\n]+",
+                  r"\g<1>compileSdkVersion 36", updated
+              )
+              updated = re.sub(
+                  r"(?m)^(\s*)compileSdk\s*=\s*[^\n]+",
+                  r"\g<1>compileSdk = 36", updated
+              )
+              updated = re.sub(
+                  r"(?m)^(\s*)compileSdk\s+[^\n]+",
+                  r"\g<1>compileSdk 36", updated
+              )
+              if not re.search(r"(?m)^\s*compileSdk(?:Version)?(?:\s*=)?\s*36\b", updated):
+                  if re.search(r"(?m)^\s*android\s*\{", updated):
+                      updated = re.sub(
+                          r"(?m)^(\s*)android\s*\{",
+                          r"\g<0>\n    compileSdk = 36", updated, count=1
+                      )
                   else:
-                      s = s.replace('android {', 'android {\n    compileSdk = 36', 1)
-              if s != original:
-                  p.write_text(s, encoding='utf-8')
-                  changed.append(str(p))
-          print('Configured compile SDK 36 in:', changed)
-          # Fail early if a Gradle script still explicitly uses Flutter's lower compile SDK.
-          leftovers = []
-          for p in files:
-              s = p.read_text(encoding='utf-8')
-              if re.search(r'compileSdk(?:Version)?\s*(?:=\s*)?(?:flutter\.compileSdkVersion|34\b)', s):
-                  leftovers.append(str(p))
-          if leftovers:
-              raise SystemExit('Android projects still use compile SDK 34: ' + ', '.join(leftovers))
+                      unresolved.append(str(path))
+              if updated != source:
+                  path.write_text(updated, encoding="utf-8")
+                  changed.append(str(path))
+
+          print("Configured compile SDK 36 in:")
+          print("\n".join(changed) if changed else "(no changes required)")
+          if unresolved:
+              raise SystemExit("Could not configure compile SDK in: " + ", ".join(unresolved))
           PY
       - name: Remove internet permission
         working-directory: arsad
@@ -69,17 +90,26 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          p=Path('android/app/src/main/AndroidManifest.xml')
-          s=p.read_text(encoding='utf-8')
-          s=re.sub(r'\s*<uses-permission(?=[^>]*android:name="android.permission.INTERNET")(?![^>]*tools:node="remove")[^>]*/>', '', s)
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text(encoding="utf-8")
+          s = re.sub(
+              r"\s*<uses-permission(?=[^>]*android:name=\"android.permission.INTERNET\")[^>]*/>",
+              "", s
+          )
+          if 'xmlns:tools="http://schemas.android.com/tools"' not in s:
+              s = s.replace(
+                  'xmlns:android="http://schemas.android.com/apk/res/android"',
+                  'xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"'
+              )
+          marker = '<application'
           if 'tools:node="remove"' not in s:
-              s=s.replace('xmlns:android="http://schemas.android.com/apk/res/android"', 'xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"')
-              s=s.replace('<uses-feature', '<uses-permission android:name="android.permission.INTERNET" tools:node="remove" />\n    <uses-feature', 1)
-          p.write_text(s, encoding='utf-8')
+              s = s.replace(
+                  marker,
+                  '<uses-permission android:name="android.permission.INTERNET" tools:node="remove" />\n    ' + marker,
+                  1
+              )
+          p.write_text(s, encoding="utf-8")
           PY
-      - name: Resolve dependencies
-        working-directory: arsad
-        run: flutter pub get
       - name: Analyze Dart code
         working-directory: arsad
         run: flutter analyze
