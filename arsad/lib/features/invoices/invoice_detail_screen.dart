@@ -46,7 +46,7 @@ class InvoiceDetailScreen extends StatelessWidget {
       ...lines.map((x)=>'${x['product_name']} × ${x['quantity']} — ${Money.format(x['line_total_halalas'] as int)}'),
       'الإجمالي: ${Money.format(inv['total_halalas'] as int)}',
       'طريقة الدفع: ${inv['payment_method']=='cash'?'نقد':'شبكة'}',
-    ].join('\\n');
+    ].join('\n');
     await Share.share(text,subject:'فاتورة أرصد ${inv['invoice_no']}');
   }
 
