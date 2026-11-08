@@ -4,7 +4,7 @@ import '../../data/local_database.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
-  @override State<ReportsScreen> createState() => _ReportsScreenState();
+  @override State<ReportsScreen> createState()=>_ReportsScreenState();
 }
 class _ReportsScreenState extends State<ReportsScreen> {
   String period='يومي';
@@ -20,8 +20,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('التقارير')),
     body:Column(children:[
-      Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:6,children:['يومي','أسبوعي','شهري','سنوي'].map((v)=>ChoiceChip(label:Text(v),selected:period==v&&customRange==null,onSelected:(_){setState((){period=v;customRange=null;});}).toList())),
-      TextButton.icon(onPressed:()async{final now=DateTime.now();final picked=await showDateRangePicker(context:context,firstDate:DateTime(2020),lastDate:DateTime(now.year+2),initialDateRange:dates);if(picked!=null&&mounted)setState(()=>customRange=picked);},icon:const Icon(Icons.date_range),label:const Text('تحديد فترة مخصصة')),
+      Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:6,children:[
+        for(final value in ['يومي','أسبوعي','شهري','سنوي'])
+          ChoiceChip(label:Text(value),selected:period==value&&customRange==null,onSelected:(_){setState((){period=value;customRange=null;});}),
+      ])),
+      TextButton.icon(onPressed:()async{
+        final now=DateTime.now();
+        final picked=await showDateRangePicker(context:context,firstDate:DateTime(2020),lastDate:DateTime(now.year+2),initialDateRange:dates);
+        if(picked!=null&&mounted)setState(()=>customRange=picked);
+      },icon:const Icon(Icons.date_range),label:const Text('تحديد فترة مخصصة')),
       Expanded(child:FutureBuilder<Map<String,Object?>>(future:LocalDatabase.instance.dashboardTotals(dates.start,dates.end),builder:(context,snapshot){
         if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
         final d=snapshot.data!;
