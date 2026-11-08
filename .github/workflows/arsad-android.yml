@@ -64,39 +64,39 @@ jobs:
               if path.suffix == ".kts":
                   # Kotlin DSL requires the assignment form: compileSdk = 36.
                   updated = re.sub(
-                      r"(?m)^(\\s*)compileSdk\\s*=\\s*[^\\n]+",
-                      r"\\g<1>compileSdk = 36",
+                      r"(?m)^(\s*)compileSdk\s*=\s*[^\n]+",
+                      r"\g<1>compileSdk = 36",
                       updated,
                   )
                   has_sdk = re.search(
-                      r"(?m)^\\s*compileSdk\\s*=\\s*36\\b", updated
+                      r"(?m)^\s*compileSdk\s*=\s*36\b", updated
                   )
                   declaration = "compileSdk = 36"
               else:
                   # Groovy DSL supports compileSdkVersion 36 or compileSdk 36.
                   updated = re.sub(
-                      r"(?m)^(\\s*)compileSdkVersion\\s+[^\\n]+",
-                      r"\\g<1>compileSdkVersion 36",
+                      r"(?m)^(\s*)compileSdkVersion\s+[^\n]+",
+                      r"\g<1>compileSdkVersion 36",
                       updated,
                   )
                   updated = re.sub(
-                      r"(?m)^(\\s*)compileSdk\\s+(?![=])[^\\n]+",
-                      r"\\g<1>compileSdk 36",
+                      r"(?m)^(\s*)compileSdk\s+(?![=])[^\n]+",
+                      r"\g<1>compileSdk 36",
                       updated,
                   )
                   has_sdk = re.search(
-                      r"(?m)^\\s*(?:compileSdkVersion\\s+36|compileSdk\\s+36)\\b",
+                      r"(?m)^\s*(?:compileSdkVersion\s+36|compileSdk\s+36)\b",
                       updated,
                   )
                   declaration = "compileSdk 36"
 
               if not has_sdk:
-                  block = re.search(r"(?m)^\\s*android\\s*\\{", updated)
+                  block = re.search(r"(?m)^\s*android\s*\{", updated)
                   if block:
-                      indent = re.match(r"\\s*", block.group(0)).group(0) + "    "
+                      indent = re.match(r"\s*", block.group(0)).group(0) + "    "
                       updated = (
                           updated[:block.end()]
-                          + "\\n"
+                          + "\n"
                           + indent
                           + declaration
                           + updated[block.end():]
@@ -109,7 +109,7 @@ jobs:
                   changed.append(str(path))
 
           print("Configured compile SDK 36 in:")
-          print("\\n".join(changed) if changed else "(no changes required)")
+          print("\n".join(changed) if changed else "(no changes required)")
           if unresolved:
               raise SystemExit("Could not configure compile SDK in: " + ", ".join(unresolved))
           PY
