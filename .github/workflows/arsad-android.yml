@@ -32,7 +32,7 @@ jobs:
           import re
           p=Path('android/app/build.gradle.kts')
           s=p.read_text(encoding='utf-8')
-          s2=re.sub(r'compileSdk\\s*=\\s*flutter\\.compileSdkVersion', 'compileSdk = 36', s)
+          s2=re.sub(r'compileSdk\s*=\s*flutter\.compileSdkVersion', 'compileSdk = 36', s)
           if s2 == s and 'compileSdk = 36' not in s:
               raise SystemExit('Could not set compileSdk to 36 in android/app/build.gradle.kts')
           p.write_text(s2, encoding='utf-8')
