@@ -78,12 +78,12 @@ class _CashScreenState extends State<CashScreen> with SingleTickerProviderStateM
         'return' => 'مردود', 'adjustment_in' => 'تسوية إضافة', 'adjustment_out' => 'تسوية خصم',
         _ => type,
       };
-      data.add([row['created_at'].toString(), label, (row['note'] ?? '').toString(),
-        '${isIn ? '+' : '-'}${Money.format(amount)}', Money.format(running)]);
+      data.add([label, row['created_at'].toString(), '1', Money.format(amount),
+        '${isIn ? '+' : '-'}${Money.format(amount)}', '${row['note'] ?? ''} • الرصيد بعد الحركة: ${Money.format(running)}']);
     }
     await StatementExporter.export(
       title: 'كشف حساب ${labels[index]}',
-      headers: const ['التاريخ والوقت', 'نوع الحركة', 'البيان', 'المبلغ', 'الرصيد بعد الحركة'],
+      headers: const ['اسم المنتج / الحركة', 'التاريخ', 'الكمية', 'السعر', 'الإجمالي', 'البيان'],
       rows: data,
       asPdf: pdf,
     );
@@ -111,6 +111,7 @@ class _CashScreenState extends State<CashScreen> with SingleTickerProviderStateM
     final table = tables[index];
     final isNetwork = index == 1;
     final theme = Theme.of(context);
+    final primary = isNetwork ? const Color(0xFF176B75) : const Color(0xFF244A73);
     return FutureBuilder<List<Map<String, Object?>>>(
       future: movements(index),
       builder: (context, snapshot) {
@@ -122,43 +123,59 @@ class _CashScreenState extends State<CashScreen> with SingleTickerProviderStateM
           final amount = (row['amount_halalas'] as num).toInt();
           balance += incoming.contains(row['type']) ? amount : -amount;
         }
-        return ListView(padding: const EdgeInsets.all(16), children: [
+        return ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 28), children: [
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: isNetwork
-                ? [const Color(0xFF0B477B), const Color(0xFF087E8B)]
-                : [const Color(0xFF073B78), const Color(0xFF1266B5)]),
-              borderRadius: BorderRadius.circular(22),
-            ),
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(color: primary, borderRadius: BorderRadius.circular(18)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(isNetwork ? 'رصيد الشبكة والبنك الحالي' : 'رصيد الصندوق الحالي', style: const TextStyle(color: Colors.white70)),
-              const SizedBox(height: 8),
-              Text(Money.format(balance), style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                _action('رصيد افتتاحي', Icons.account_balance_wallet_outlined, () => addMovement(table, 'opening')),
-                _action('إضافة رصيد', Icons.add_circle_outline, () => addMovement(table, 'deposit')),
-                _action('سحب رصيد', Icons.remove_circle_outline, () => addMovement(table, 'withdrawal')),
-                _action('مصروف', Icons.receipt_long, () => addMovement(table, 'expense')),
-                if (isNetwork) _action('رسوم بنكية', Icons.account_balance, () => addMovement(table, 'bank_fee')),
+              Row(children: [
+                Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(12)),
+                  child: Icon(isNetwork ? Icons.account_balance_outlined : Icons.wallet_outlined, color: Colors.white, size: 25)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(isNetwork ? 'حساب الشبكة والبنك' : 'الصندوق النقدي',
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600))),
+                const Icon(Icons.verified_user_outlined, color: Colors.white70),
               ]),
+              const SizedBox(height: 22),
+              const Text('الرصيد الحالي', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 5),
+              Text(Money.format(balance), style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text('${rows.length} حركة مسجلة', style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ]),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
+          const Text('إدارة الحساب', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.6,
+            children: [
+              _action('رصيد افتتاحي', Icons.account_balance_wallet_outlined, () => addMovement(table, 'opening')),
+              _action('إضافة رصيد', Icons.add_circle_outline, () => addMovement(table, 'deposit')),
+              _action('سحب رصيد', Icons.remove_circle_outline, () => addMovement(table, 'withdrawal')),
+              _action('مصروف', Icons.receipt_long, () => addMovement(table, 'expense')),
+              if (isNetwork) _action('رسوم بنكية', Icons.account_balance, () => addMovement(table, 'bank_fee')),
+            ],
+          ),
+          const SizedBox(height: 20),
           Row(children: [
             const Expanded(child: Text('كشف الحساب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
             Text('${rows.length} حركة', style: theme.textTheme.bodySmall),
           ]),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(children: [
-            Expanded(child: OutlinedButton.icon(onPressed: () => export(index, rows, true), icon: const Icon(Icons.picture_as_pdf_outlined), label: const Text('تصدير PDF'))),
-            const SizedBox(width: 8),
-            Expanded(child: OutlinedButton.icon(onPressed: () => export(index, rows, false), icon: const Icon(Icons.table_view_outlined), label: const Text('تصدير Excel'))),
+            Expanded(child: OutlinedButton.icon(onPressed: () => export(index, rows, true),
+              icon: const Icon(Icons.picture_as_pdf_outlined), label: const Text('تصدير PDF'))),
+            const SizedBox(width: 10),
+            Expanded(child: FilledButton.tonalIcon(onPressed: () => export(index, rows, false),
+              icon: const Icon(Icons.table_view_outlined), label: const Text('تصدير Excel'))),
           ]),
-          const SizedBox(height: 12),
-          const Text('جميع العمليات', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          if (rows.isEmpty) const Padding(padding: EdgeInsets.all(30), child: Center(child: Text('لا توجد عمليات مسجلة بعد'))),
+          const SizedBox(height: 18),
+          const Text('سجل الحركات', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (rows.isEmpty)
+            const Card(child: Padding(padding: EdgeInsets.all(28), child: Center(child: Text('لا توجد عمليات مسجلة بعد')))),
           ...rows.map((row) {
             final type = row['type'] as String;
             final positive = incoming.contains(type);
@@ -169,28 +186,38 @@ class _CashScreenState extends State<CashScreen> with SingleTickerProviderStateM
               'return' => 'مردود', 'adjustment_in' => 'تسوية إضافة', 'adjustment_out' => 'تسوية خصم',
               _ => type,
             };
-            return Card(elevation: 0, child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: (positive ? Colors.green : Colors.red).withValues(alpha: .1),
-                child: Icon(positive ? Icons.south_west : Icons.north_east, color: positive ? Colors.green : Colors.red),
+            final color = positive ? const Color(0xFF237A57) : const Color(0xFFB54747);
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: theme.dividerColor.withValues(alpha: .65))),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                leading: Container(width: 42, height: 42, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(12)),
+                  child: Icon(positive ? Icons.south_west : Icons.north_east, color: color)),
+                title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Padding(padding: const EdgeInsets.only(top: 5), child: Text('${row['created_at']}${(row['note'] ?? '').toString().isEmpty ? '' : '\n${row['note']}'}')),
+                isThreeLine: (row['note'] ?? '').toString().isNotEmpty,
+                trailing: Text('${positive ? '+' : '−'}${Money.format(amount)}',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 14)),
               ),
-              title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text('${row['created_at']}\n${row['note'] ?? ''}'),
-              isThreeLine: (row['note'] ?? '').toString().isNotEmpty,
-              trailing: Text('${positive ? '+' : '−'}${Money.format(amount)}',
-                style: TextStyle(fontWeight: FontWeight.bold, color: positive ? Colors.green : Colors.red)),
-            ));
+            );
           }),
         ]);
       },
     );
   }
 
-  Widget _action(String label, IconData icon, VoidCallback onTap) => ActionChip(
-    avatar: Icon(icon, size: 18, color: Colors.white),
-    label: Text(label, style: const TextStyle(color: Colors.white)),
-    backgroundColor: Colors.white24,
-    side: BorderSide.none,
-    onPressed: onTap,
-  );
+  Widget _action(String label, IconData icon, VoidCallback onTap) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 20),
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      style: OutlinedButton.styleFrom(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+      ),
+    );
+  }
 }
