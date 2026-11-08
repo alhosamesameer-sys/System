@@ -19,7 +19,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       start: DateTime(custom!.start.year, custom!.start.month, custom!.start.day),
       end: DateTime(custom!.end.year, custom!.end.month, custom!.end.day + 1),
     );
-    if (period == 'شهري') return DateTimeRange(start: DateTime(now.year, now.month), end: DateTime(now.year, now.month + 1));
+    if (period == 'شهري') { return DateTimeRange(start: DateTime(now.year, now.month), end: DateTime(now.year, now.month + 1)); }
     if (period == 'سنوي') return DateTimeRange(start: DateTime(now.year), end: DateTime(now.year + 1));
     if (period == 'أسبوعي') {
       final start = DateTime(now.year, now.month, now.day - now.weekday + 1);
@@ -40,18 +40,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
         args,
       );
     }
-    if (kind == 'returns') return db.rawQuery(
+    if (kind == 'returns') { return db.rawQuery(
       'SELECT invoices.invoice_no AS ref, returns.created_at AS date, returns.reason AS detail, returns.total_halalas AS amount FROM returns JOIN invoices ON invoices.id=returns.invoice_id WHERE returns.created_at>=? AND returns.created_at<? ORDER BY returns.created_at DESC',
       args,
-    );
-    if (kind == 'net') return db.rawQuery(
+    ); }
+    if (kind == 'net') { return db.rawQuery(
       "SELECT invoice_no AS ref,created_at AS date,'مبيعات' AS detail,total_halalas AS amount FROM invoices WHERE created_at>=? AND created_at<? UNION ALL SELECT CAST(id AS TEXT),created_at,'مرتجع',-total_halalas FROM returns WHERE created_at>=? AND created_at<? ORDER BY date DESC",
       [...args, ...args],
-    );
-    if (kind == 'expenses') return db.rawQuery(
+    ); }
+    if (kind == 'expenses') { return db.rawQuery(
       'SELECT id AS ref,created_at AS date,title AS detail,amount_halalas AS amount FROM expenses WHERE created_at>=? AND created_at<? ORDER BY created_at DESC',
       args,
-    );
+    ); }
     final table = kind == 'cashflow' ? 'cash_transactions' : 'network_transactions';
     return db.rawQuery(
       'SELECT id AS ref,created_at AS date,COALESCE(note,type) AS detail,amount_halalas AS amount,type FROM $table WHERE created_at>=? AND created_at<? ORDER BY created_at DESC',
