@@ -1,0 +1,49 @@
+name: ARSAD Android Build
+on:
+  push:
+    paths:
+      - 'arsad/**'
+      - '.github/workflows/arsad-android.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform files if missing
+        working-directory: arsad
+        run: |
+          if [ ! -f android/settings.gradle ] && [ ! -f android/settings.gradle.kts ]; then
+            flutter create --platforms=android --org com.arsad --project-name arsad .
+          fi
+      - name: Remove internet permission
+        working-directory: arsad
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('android/app/src/main/AndroidManifest.xml')
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'\s*<uses-permission[^>]*android:name="android.permission.INTERNET"[^>]*/>', '', s)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Resolve dependencies
+        working-directory: arsad
+        run: flutter pub get
+      - name: Analyze Dart code
+        working-directory: arsad
+        run: flutter analyze
+      - name: Run tests
+        working-directory: arsad
+        run: flutter test
+      - name: Build release APK
+        working-directory: arsad
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arsad-release-apk
+          path: arsad/build/app/outputs/flutter-apk/app-release.apk
