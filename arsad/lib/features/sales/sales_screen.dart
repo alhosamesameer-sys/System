@@ -10,7 +10,6 @@ class SalesScreen extends StatefulWidget {
 class _SalesScreenState extends State<SalesScreen> {
   final search=TextEditingController();
   final cart=<int,Map<String,Object?>>{};
-  static const units=['حبة','باكت','كرتون','علبة','كيلو','جرام','لتر','متر'];
   String payment='cash';
   bool saving=false;
   bool showSuggestions=false;
@@ -28,7 +27,7 @@ class _SalesScreenState extends State<SalesScreen> {
     final id=product['id'] as int;
     setState((){
       if(cart.containsKey(id)){cart[id]!['qty']=(cart[id]!['qty'] as int)+1;}
-      else{cart[id]={...product,'qty':1,'unit':product['unit']??'حبة'};}
+      else{cart[id]={...product,'qty':1};}
       search.clear();showSuggestions=false;
     });
     FocusScope.of(context).unfocus();
@@ -57,13 +56,11 @@ class _SalesScreenState extends State<SalesScreen> {
     final barcode=TextEditingController();
     final price=TextEditingController();
     final quantity=TextEditingController();
-    String unit=units.first;
     final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(d,setDialog)=>AlertDialog(
       title:const Text('إضافة منتج جديد للفاتورة'),
       content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
         TextField(controller:name,decoration:const InputDecoration(labelText:'اسم الصنف')),
         TextField(controller:barcode,decoration:InputDecoration(labelText:'الباركود',suffixIcon:IconButton(tooltip:'مسح الباركود',icon:const Icon(Icons.qr_code_scanner),onPressed:()async{final code=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>const BarcodeScreen()));if(code!=null)barcode.text=code;}))),
-        DropdownButtonFormField<String>(value:unit,decoration:const InputDecoration(labelText:'الوحدة'),items:units.map((u)=>DropdownMenuItem(value:u,child:Text(u))).toList(),onChanged:(v){if(v!=null)setDialog(()=>unit=v);}),
         TextField(controller:price,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'سعر الوحدة (ر.س)')),
         TextField(controller:quantity,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية بالمخزون (اختياري)')),
       ])),
@@ -72,7 +69,7 @@ class _SalesScreenState extends State<SalesScreen> {
       try{
         if(name.text.trim().isEmpty)throw Exception('أدخل اسم الصنف');
         final db=await LocalDatabase.instance.database;
-        final id=await db.insert('products',{'name':name.text.trim(),'barcode':barcode.text.trim().isEmpty?null:barcode.text.trim(),'unit':unit,'sale_price_halalas':Money.parseHalalas(price.text),'quantity':quantity.text.trim().isEmpty?null:double.parse(quantity.text),'created_at':DateTime.now().toIso8601String(),'is_active':1});
+        final id=await db.insert('products',{'name':name.text.trim(),'barcode':barcode.text.trim().isEmpty?null:barcode.text.trim(),'sale_price_halalas':Money.parseHalalas(price.text),'quantity':quantity.text.trim().isEmpty?null:double.parse(quantity.text),'created_at':DateTime.now().toIso8601String(),'is_active':1});
         final rows=await db.query('products',where:'id=?',whereArgs:[id],limit:1);
         if(rows.isNotEmpty&&mounted){add(rows.first);}
       }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذرت إضافة المنتج: $e')));}
@@ -85,7 +82,7 @@ class _SalesScreenState extends State<SalesScreen> {
     final confirmed=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(
       title:const Text('مراجعة الفاتورة كاملة'),
       content:SizedBox(width:double.maxFinite,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        ...cart.values.map((item)=>ListTile(contentPadding:EdgeInsets.zero,title:Text(item['name'] as String),subtitle:Text('الكمية: ${item['qty']} ${item['unit']} • سعر الوحدة: ${Money.format(item['sale_price_halalas'] as int)}'),trailing:Text(Money.format(lineTotal(item)),style:const TextStyle(fontWeight:FontWeight.bold)))),
+        ...cart.values.map((item)=>ListTile(contentPadding:EdgeInsets.zero,title:Text(item['name'] as String),subtitle:Text('الكمية: ${item['qty']} • سعر القطعة: ${Money.format(item['sale_price_halalas'] as int)}'),trailing:Text(Money.format(lineTotal(item)),style:const TextStyle(fontWeight:FontWeight.bold)))),
         const Divider(),
         ListTile(title:const Text('الإجمالي النهائي',style:TextStyle(fontWeight:FontWeight.bold)),trailing:Text(Money.format(total),style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold))),
         Text(payment=='cash'?'طريقة الدفع: نقد':'طريقة الدفع: شبكة'),
@@ -98,7 +95,7 @@ class _SalesScreenState extends State<SalesScreen> {
     if(cart.isEmpty||saving)return;
     setState(()=>saving=true);
     try{
-      await LocalDatabase.instance.createInvoice(items:cart.values.map((item)=><String,Object?>{'product_id':item['id'],'product_name':item['name'],'quantity':item['qty'],'unit':item['unit']??'حبة','unit_price_halalas':item['sale_price_halalas']}).toList(),paymentMethod:payment,stockEnabled:await LocalDatabase.instance.stockEnabled());
+      await LocalDatabase.instance.createInvoice(items:cart.values.map((item)=><String,Object?>{'product_id':item['id'],'product_name':item['name'],'quantity':item['qty'],'unit_price_halalas':item['sale_price_halalas']}).toList(),paymentMethod:payment,stockEnabled:await LocalDatabase.instance.stockEnabled());
       if(mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم حفظ الفاتورة وتسجيل الحركة المالية')));Navigator.pop(context);}
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر حفظ الفاتورة: $e')));}
     finally{if(mounted)setState(()=>saving=false);}
@@ -114,7 +111,7 @@ class _SalesScreenState extends State<SalesScreen> {
           if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
           final matches=snapshot.data!;
           if(matches.isEmpty)return Padding(padding:const EdgeInsets.all(12),child:Column(children:[const Text('لا توجد نتائج مطابقة'),TextButton.icon(onPressed:addNewProduct,icon:const Icon(Icons.add),label:const Text('إضافة هذا المنتج جديدًا'))]));
-          return ListView.builder(itemCount:matches.length,itemBuilder:(context,index){final p=matches[index];return ListTile(dense:true,title:Text(p['name'] as String),subtitle:Text('الباركود: ${p['barcode']??'—'} • ${p['unit']??'حبة'} • سعر الوحدة: ${Money.format(p['sale_price_halalas'] as int)}'),trailing:const Icon(Icons.add_circle,color:Colors.teal),onTap:()=>add(p));});
+          return ListView.builder(itemCount:matches.length,itemBuilder:(context,index){final p=matches[index];return ListTile(dense:true,title:Text(p['name'] as String),subtitle:Text('الباركود: ${p['barcode']??'—'} • سعر القطعة: ${Money.format(p['sale_price_halalas'] as int)}'),trailing:const Icon(Icons.add_circle,color:Colors.teal),onTap:()=>add(p));});
         })),
       Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:OutlinedButton.icon(onPressed:addNewProduct,icon:const Icon(Icons.add),label:const Text('إضافة منتج جديد'))),
       const Divider(),
@@ -126,12 +123,10 @@ class _SalesScreenState extends State<SalesScreen> {
           Row(children:[
             Expanded(child:_fieldLabel('الكمية',Text('$qty',textAlign:TextAlign.center))),
             const SizedBox(width:8),
-            Expanded(child:_fieldLabel('الوحدة',DropdownButtonHideUnderline(child:DropdownButton<String>(isExpanded:true,value:units.contains(unit)?unit:units.first,items:units.map((u)=>DropdownMenuItem(value:u,child:Text(u,style:const TextStyle(fontSize:13)))).toList(),onChanged:(v){if(v!=null)setState(()=>item['unit']=v);}))),
-            const SizedBox(width:8),
             Expanded(child:_fieldLabel('السعر',Text(Money.format(price),textAlign:TextAlign.center,style:const TextStyle(fontSize:12)))),
           ]),
           const SizedBox(height:6),
-          if(item['quantity']!=null)Align(alignment:Alignment.centerRight,child:Text('المتاح بالمخزون: ${item['quantity']} $unit',style:TextStyle(color:Colors.teal.shade700,fontSize:12))),
+          if(item['quantity']!=null)Align(alignment:Alignment.centerRight,child:Text('المتاح بالمخزون: ${item['quantity']}',style:TextStyle(color:Colors.teal.shade700,fontSize:12))),
           Row(children:[
             IconButton(tooltip:'زيادة الكمية',onPressed:()=>setState(()=>item['qty']=qty+1),icon:const Icon(Icons.add_circle_outline)),
             IconButton(tooltip:'تقليل الكمية',onPressed:()=>setState(()=>item['qty']=qty>1?qty-1:1),icon:const Icon(Icons.remove_circle_outline)),
