@@ -11,16 +11,14 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   final reason=TextEditingController(text:'مرتجع من العميل');
   Map<String,Object?>? invoice;
   List<Map<String,Object?>> items=[];
-  List<Map<String,Object?>> invoices=[];
   final qty=<int,TextEditingController>{};
   bool loading=false;
   bool saving=false;
 
-  Future<void> loadInvoices() async {
+  Future<List<Map<String,Object?>>> loadInvoices() async {
     final db=await LocalDatabase.instance.database;
     final q=invoiceNo.text.trim();
-    final rows=await db.rawQuery('SELECT * FROM invoices WHERE invoice_no LIKE ? OR id IN (SELECT invoice_id FROM invoice_items WHERE product_name LIKE ?) ORDER BY id DESC LIMIT 100',['%$q%','%$q%']);
-    if(mounted)setState(()=>invoices=rows);
+    return db.rawQuery('SELECT * FROM invoices WHERE invoice_no LIKE ? OR id IN (SELECT invoice_id FROM invoice_items WHERE product_name LIKE ?) ORDER BY id DESC LIMIT 100',['%$q%','%$q%']);
   }
 
   Future<void> selectInvoice(Map<String,Object?> selected) async {
@@ -48,7 +46,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
       final selected=<int,double>{};
       for(final entry in qty.entries){final value=double.tryParse(entry.value.text)??0;if(value>0)selected[entry.key]=value;}
       await LocalDatabase.instance.createReturn(invoiceId:invoice!['id'] as int,quantities:selected,reason:reason.text);
-      if(mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم تسجيل المردود وتحديث الحساب')));setState(()=>invoice=null);await loadInvoices();}
+      if(mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم تسجيل المردود وتحديث الحساب')));setState(()=>invoice=null);}
     }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تسجيل المردود: $e')));}
     finally{if(mounted)setState(()=>saving=false);}
   }
@@ -57,9 +55,11 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('المردودات')),
     body:Column(children:[
-      Padding(padding:const EdgeInsets.all(12),child:TextField(controller:invoiceNo,onChanged:(_)=>loadInvoices(),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'ابحث برقم الفاتورة أو اسم الصنف'))),
+      Padding(padding:const EdgeInsets.all(12),child:TextField(controller:invoiceNo,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'ابحث برقم الفاتورة أو اسم الصنف'))),
       if(invoice==null)Expanded(child:FutureBuilder<void>(future:loadInvoices(),builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+        if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
+        final invoices=snapshot.data!;
         if(invoices.isEmpty)return const Center(child:Text('لا توجد فواتير مطابقة'));
         return ListView.builder(itemCount:invoices.length,itemBuilder:(context,index){
           final row=invoices[index];
