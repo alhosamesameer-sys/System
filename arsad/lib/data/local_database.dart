@@ -113,7 +113,7 @@ class LocalDatabase {
     });
   }
 
-  Future<int> createReturn({required int invoiceId,required Map<int,double> quantities,required String reason,required bool stockEnabled}) async {
+  Future<int> createReturn({required int invoiceId,required Map<int,double> quantities,required String reason}) async {
     if(quantities.isEmpty) throw Exception('حدد كمية واحدة على الأقل');
     final db=await database;
     return db.transaction((txn) async {
