@@ -1,23 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../core/money.dart';
 import '../../data/local_database.dart';
-
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('أرصد')),
-    body: FutureBuilder<List<int>>(
-      future: Future.wait([
-        LocalDatabase.instance.balance('cash_transactions'),
-        LocalDatabase.instance.balance('network_transactions'),
-      ]),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        return ListView(padding: const EdgeInsets.all(16), children: [
-          ListTile(title: const Text('رصيد الصندوق'), trailing: Text('$${snapshot.data![0]} هللة')),
-          ListTile(title: const Text('رصيد الشبكة'), trailing: Text('$${snapshot.data![1]} هللة')),
-        ]);
-      },
-    ),
-  );
+import '../products/products_screen.dart';import '../sales/sales_screen.dart';import '../cash/cash_screen.dart';import '../reports/reports_screen.dart';import '../settings/settings_screen.dart';import '../invoices/invoices_screen.dart';import '../returns/returns_screen.dart';
+class DashboardScreen extends StatefulWidget{const DashboardScreen({super.key});@override State<DashboardScreen> createState()=>_DashboardScreenState();}
+class _DashboardScreenState extends State<DashboardScreen>{Future<void> refresh()async{setState((){});}
+@override Widget build(BuildContext c)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(appBar:AppBar(title:const Text('أرصد | ARSAD'),actions:[IconButton(onPressed:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>const SettingsScreen())),icon:const Icon(Icons.settings))]),body:FutureBuilder<List<int>>(future:Future.wait([LocalDatabase.instance.balance('cash_transactions'),LocalDatabase.instance.balance('network_transactions')]),builder:(c,s){if(!s.hasData)return const Center(child:CircularProgressIndicator());final entries=<({String title,IconData icon,Widget page})>[(title:'مبيعات جديدة',icon:Icons.point_of_sale,page:const SalesScreen()),(title:'الأصناف',icon:Icons.inventory_2,page:const ProductsScreen()),(title:'الفواتير',icon:Icons.receipt_long,page:const InvoicesScreen()),(title:'المردودات',icon:Icons.assignment_return,page:const ReturnsScreen()),(title:'الصندوق والشبكة',icon:Icons.account_balance_wallet,page:const CashScreen()),(title:'التقارير',icon:Icons.bar_chart,page:const ReportsScreen()),(title:'الإعدادات',icon:Icons.settings,page:const SettingsScreen())];return RefreshIndicator(onRefresh:refresh,child:ListView(padding:const EdgeInsets.all(16),children:[const Text('مرحباً بك في أرصد',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),const SizedBox(height:12),Row(children:[Expanded(child:_balance('الصندوق',s.data![0],Colors.green)),const SizedBox(width:8),Expanded(child:_balance('الشبكة',s.data![1],Colors.blue))]),const SizedBox(height:12),GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:entries.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,childAspectRatio:1.35,crossAxisSpacing:10,mainAxisSpacing:10),itemBuilder:(c,i){final x=entries[i];return Card(child:InkWell(borderRadius:BorderRadius.circular(18),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>x.page)).then((_)=>setState((){})),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(x.icon,size:34,color:Theme.of(c).colorScheme.primary),const SizedBox(height:8),Text(x.title,style:const TextStyle(fontWeight:FontWeight.bold))])));})]));})));
 }
+Widget _balance(String title,int value,Color color)=>Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[Text(title),const SizedBox(height:6),Text(Money.format(value),style:TextStyle(color:color,fontSize:18,fontWeight:FontWeight.bold))])));
