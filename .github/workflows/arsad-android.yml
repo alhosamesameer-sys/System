@@ -29,7 +29,7 @@ jobs:
       - name: Configure Android compile SDK 36 for app and plugins
         working-directory: arsad
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-36" || true
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-36" >/dev/null 2>&1 || true
           python3 - <<'PY'
           from pathlib import Path
           import json
@@ -60,22 +60,56 @@ jobs:
           for path in sorted(targets):
               source = path.read_text(encoding="utf-8")
               updated = source
-              updated = re.sub(r"(?m)^(\s*)compileSdkVersion\s+[^\n]+", r"\g<1>compileSdkVersion 36", updated)
-              updated = re.sub(r"(?m)^(\s*)compileSdk\s*=\s*[^\n]+", r"\g<1>compileSdk = 36", updated)
-              updated = re.sub(r"(?m)^(\s*)compileSdk\s+[^\n]+", r"\g<1>compileSdk 36", updated)
-              if not re.search(r"(?m)^\s*compileSdk(?:Version)?(?:\s*=)?\s*36\b", updated):
-                  block = re.search(r"(?m)^\s*android\s*\{", updated)
+
+              if path.suffix == ".kts":
+                  # Kotlin DSL requires the assignment form: compileSdk = 36.
+                  updated = re.sub(
+                      r"(?m)^(\\s*)compileSdk\\s*=\\s*[^\\n]+",
+                      r"\\g<1>compileSdk = 36",
+                      updated,
+                  )
+                  has_sdk = re.search(
+                      r"(?m)^\\s*compileSdk\\s*=\\s*36\\b", updated
+                  )
+                  declaration = "compileSdk = 36"
+              else:
+                  # Groovy DSL supports compileSdkVersion 36 or compileSdk 36.
+                  updated = re.sub(
+                      r"(?m)^(\\s*)compileSdkVersion\\s+[^\\n]+",
+                      r"\\g<1>compileSdkVersion 36",
+                      updated,
+                  )
+                  updated = re.sub(
+                      r"(?m)^(\\s*)compileSdk\\s+(?![=])[^\\n]+",
+                      r"\\g<1>compileSdk 36",
+                      updated,
+                  )
+                  has_sdk = re.search(
+                      r"(?m)^\\s*(?:compileSdkVersion\\s+36|compileSdk\\s+36)\\b",
+                      updated,
+                  )
+                  declaration = "compileSdk 36"
+
+              if not has_sdk:
+                  block = re.search(r"(?m)^\\s*android\\s*\\{", updated)
                   if block:
-                      indent = re.match(r"\s*", block.group(0)).group(0) + "    "
-                      updated = updated[:block.end()] + "\n" + indent + "compileSdk = 36" + updated[block.end():]
+                      indent = re.match(r"\\s*", block.group(0)).group(0) + "    "
+                      updated = (
+                          updated[:block.end()]
+                          + "\\n"
+                          + indent
+                          + declaration
+                          + updated[block.end():]
+                      )
                   else:
                       unresolved.append(str(path))
+
               if updated != source:
                   path.write_text(updated, encoding="utf-8")
                   changed.append(str(path))
 
           print("Configured compile SDK 36 in:")
-          print("\n".join(changed) if changed else "(no changes required)")
+          print("\\n".join(changed) if changed else "(no changes required)")
           if unresolved:
               raise SystemExit("Could not configure compile SDK in: " + ", ".join(unresolved))
           PY
