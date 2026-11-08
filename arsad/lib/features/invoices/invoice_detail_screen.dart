@@ -5,6 +5,7 @@ import '../../core/thermal_printer.dart';
 import '../../data/local_database.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
 class InvoiceDetailScreen extends StatelessWidget {
   final int invoiceId;
@@ -32,6 +33,21 @@ class InvoiceDetailScreen extends StatelessWidget {
       pw.Text('الدفع: ${inv['payment_method']=='cash'?'نقد':'شبكة'}'),
     ]))));
     await Printing.layoutPdf(onLayout:(_)=>doc.save());
+  }
+
+  Future<void> shareInvoice(Map<String,Object?> data) async {
+    final inv=data['invoice'] as Map<String,Object?>;
+    final lines=data['items'] as List<Map<String,Object?>>;
+    final store=data['store'] as Map<String,Object?>;
+    final text=<String>[
+      store['store_name'] as String,
+      'فاتورة رقم: ${inv['invoice_no']}',
+      'التاريخ: ${inv['created_at']}',
+      ...lines.map((x)=>'${x['product_name']} × ${x['quantity']} — ${Money.format(x['line_total_halalas'] as int)}'),
+      'الإجمالي: ${Money.format(inv['total_halalas'] as int)}',
+      'طريقة الدفع: ${inv['payment_method']=='cash'?'نقد':'شبكة'}',
+    ].join('\\n');
+    await Share.share(text,subject:'فاتورة أرصد ${inv['invoice_no']}');
   }
 
   Future<void> printThermal(Map<String,Object?> data) async {
@@ -74,6 +90,7 @@ class InvoiceDetailScreen extends StatelessWidget {
         ...lines.map((x)=>ListTile(title:Text(x['product_name'] as String),subtitle:Text('الكمية: ${x['quantity']}'),trailing:Text(Money.format(x['line_total_halalas'] as int)))),
         Text('الإجمالي: ${Money.format(inv['total_halalas'] as int)}'),
         FilledButton.icon(onPressed:()=>printInvoice(snapshot.data!),icon:const Icon(Icons.print),label:const Text('طباعة / PDF')),
+        OutlinedButton.icon(onPressed:()=>shareInvoice(snapshot.data!),icon:const Icon(Icons.share),label:const Text('مشاركة الفاتورة')),
         OutlinedButton.icon(onPressed:()async{try{await printThermal(snapshot.data!);}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذرت الطباعة الحرارية: $e')));}},icon:const Icon(Icons.bluetooth),label:const Text('طباعة حرارية Bluetooth')),
       ]);
     }),
