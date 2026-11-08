@@ -11,7 +11,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   DateTimeRange? customRange;
   DateTimeRange get dates {
     final now=DateTime.now();
-    if(customRange!=null)return customRange!;
+    if(customRange!=null)return DateTimeRange(start:customRange!.start,end:DateTime(customRange!.end.year,customRange!.end.month,customRange!.end.day+1));
     if(period=='شهري')return DateTimeRange(start:DateTime(now.year,now.month,1),end:DateTime(now.year,now.month+1,1));
     if(period=='سنوي')return DateTimeRange(start:DateTime(now.year),end:DateTime(now.year+1));
     if(period=='أسبوعي')return DateTimeRange(start:DateTime(now.year,now.month,now.day-(now.weekday-1)),end:DateTime(now.year,now.month,now.day-(now.weekday-1)+7));
