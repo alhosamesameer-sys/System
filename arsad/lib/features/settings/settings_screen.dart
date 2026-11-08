@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';import '../../data/local_database.dart';import '../backup/backup_screen.dart';
+import 'package:flutter/material.dart';import 'package:sqflite/sqflite.dart';import '../../data/local_database.dart';import '../backup/backup_screen.dart';
 class SettingsScreen extends StatefulWidget{const SettingsScreen({super.key});@override State<SettingsScreen> createState()=>_SettingsScreenState();}
 class _SettingsScreenState extends State<SettingsScreen>{final name=TextEditingController();bool stock=false;bool loaded=false;
 Future<void> init()async{final db=await LocalDatabase.instance.database;final s=(await db.query('store_settings',where:'id=1')).first;name.text=s['store_name'] as String;stock=await LocalDatabase.instance.stockEnabled();if(mounted)setState(()=>loaded=true);}
