@@ -36,7 +36,8 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
       final id=item['id'] as int;
       final count=double.tryParse(qty[id]?.text??'0')??0;
       final price=item['unit_price_halalas'] as int;
-      total+=(count*price).round();
+      final already=(item['returned_quantity'] as num).toDouble();
+      total+=((already+count)*price).round()-(already*price).round();
     }
     return total;
   }
@@ -93,12 +94,15 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
       title:const Text('مراجعة المرتجع بالكامل'),
       content:SizedBox(width:double.maxFinite,child:Column(mainAxisSize:MainAxisSize.min,children:[
         Align(alignment:Alignment.centerRight,child:Text('الفاتورة ${invoice!['invoice_no']}',style:const TextStyle(fontWeight:FontWeight.bold))),
+        Align(alignment:Alignment.centerRight,child:Text('طريقة الاسترداد: ${invoice!['payment_method']=='cash'?'نقداً إلى الصندوق':'إلى حساب الشبكة والبنك'}')),
         const SizedBox(height:10),
         Flexible(child:SingleChildScrollView(child:Column(children:[
           ...items.where((x)=>(double.tryParse(qty[x['id'] as int]?.text??'0')??0)>0).map((x){
             final q=double.tryParse(qty[x['id'] as int]!.text)??0;
             final price=x['unit_price_halalas'] as int;
-            return ListTile(contentPadding:EdgeInsets.zero,title:Text(x['product_name'] as String),subtitle:Text('الكمية المرتجعة: $q • سعر القطعة: ${Money.format(price)}'),trailing:Text(Money.format((q*price).round()),style:const TextStyle(fontWeight:FontWeight.bold)));
+            final already=(x['returned_quantity'] as num).toDouble();
+            final lineTotal=((already+q)*price).round()-(already*price).round();
+            return ListTile(contentPadding:EdgeInsets.zero,title:Text(x['product_name'] as String),subtitle:Text('الكمية المرتجعة: $q • سعر القطعة: ${Money.format(price)}'),trailing:Text(Money.format(lineTotal),style:const TextStyle(fontWeight:FontWeight.bold)));
           })
         ]))),
         const Divider(),
