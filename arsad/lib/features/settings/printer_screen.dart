@@ -17,6 +17,7 @@ class _PrinterScreenState extends State<PrinterScreen> {
   Future<void> load() async {
     setState(()=>loading=true);
     try {
+      message=null;
       final db=await LocalDatabase.instance.database;
       final rows=await db.query('app_settings',where:'key IN (?,?)',whereArgs:['printer_address','printer_paper']);
       for(final row in rows){if(row['key']=='printer_address')selected=row['value'] as String;if(row['key']=='printer_paper')paper=int.tryParse(row['value'] as String)??58;}
@@ -58,7 +59,7 @@ Paper: $paper mm
       const SizedBox(height:12),
       DropdownButtonFormField<int>(initialValue:paper,decoration:const InputDecoration(labelText:'عرض الورق'),items:const [DropdownMenuItem(value:58,child:Text('58 mm')),DropdownMenuItem(value:80,child:Text('80 mm'))],onChanged:(value)=>setState(()=>paper=value??58)),
       const SizedBox(height:16),
-      FilledButton(onPressed:save,child:const Text('حفظ الإعدادات')),
+      FilledButton(onPressed:()async{try{await save();}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}},child:const Text('حفظ الإعدادات')),
       OutlinedButton.icon(onPressed:()async{try{await testPrint();}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}},icon:const Icon(Icons.print),label:const Text('اختبار الطباعة')),
     ]),
   );
