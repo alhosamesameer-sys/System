@@ -15,7 +15,8 @@ class StatementExporter {
     if (asPdf) {
       final pages=<pw.MemoryImage>[];
       const perPage=28;
-      final pageCount=(rows.length/perPage).ceil().clamp(1, 100000);
+      final calculatedPages=(rows.length/perPage).ceil();
+      final pageCount=calculatedPages<1?1:calculatedPages;
       for(var page=0;page<pageCount;page++){
         final start=page*perPage;
         final end=(start+perPage<rows.length)?start+perPage:rows.length;
