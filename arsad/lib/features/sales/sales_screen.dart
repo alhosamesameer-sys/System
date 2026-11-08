@@ -46,7 +46,7 @@ class _SalesScreenState extends State<SalesScreen> {
   Future<void> editPrice(int id) async {
     final item=cart[id];if(item==null)return;
     final controller=TextEditingController(text:((item['sale_price_halalas'] as int)/100).toStringAsFixed(2));
-    final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:const Text('تعديل سعر الوحدة'),content:TextField(controller:controller,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر بالريال')),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('حفظ'))]));
+    final ok=await showDialog<bool>(context:context,builder:(d)=>AlertDialog(title:const Text('تعديل سعر القطعة'),content:TextField(controller:controller,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر بالريال')),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('حفظ'))]));
     if(ok==true&&mounted){try{final value=Money.parseHalalas(controller.text);setState(()=>item['sale_price_halalas']=value);}catch(e){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}}
     controller.dispose();
   }
@@ -116,7 +116,7 @@ class _SalesScreenState extends State<SalesScreen> {
       Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:OutlinedButton.icon(onPressed:addNewProduct,icon:const Icon(Icons.add),label:const Text('إضافة منتج جديد'))),
       const Divider(),
       Expanded(child:cart.isEmpty?const Center(child:Text('امسح باركود أو ابحث عن منتج لإضافته للفاتورة')):ListView(padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),children:cart.entries.map((entry){
-        final item=entry.value;final qty=item['qty'] as int;final price=item['sale_price_halalas'] as int;final unit=item['unit'] as String? ?? 'حبة';
+        final item=entry.value;final qty=item['qty'] as int;final price=item['sale_price_halalas'] as int;
         return Card(elevation:2,child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Text(item['name'] as String,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:16)),
           const SizedBox(height:8),
