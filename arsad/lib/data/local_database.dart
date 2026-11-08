@@ -11,16 +11,16 @@ class LocalDatabase {
   Future<Database> get database async {
     if (_db != null) return _db!;
     final root = await getDatabasesPath();
-    _db = await openDatabase(p.join(root, 'arsad_local.db'), version: 2,
+    _db = await openDatabase(p.join(root, 'arsad_local.db'), version: 3,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute('CREATE TABLE users(id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL)');
         await db.execute("CREATE TABLE store_settings(id INTEGER PRIMARY KEY CHECK(id=1), store_name TEXT NOT NULL DEFAULT 'متجري', phone TEXT, address TEXT, currency TEXT NOT NULL DEFAULT 'ر.س', stock_enabled INTEGER NOT NULL DEFAULT 0)");
-        await db.execute('CREATE TABLE products(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, barcode TEXT UNIQUE, sale_price_halalas INTEGER NOT NULL CHECK(sale_price_halalas>=0), quantity REAL, low_stock_limit REAL NOT NULL DEFAULT 5, is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL)');
+        await db.execute('CREATE TABLE products(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, barcode TEXT UNIQUE, sale_price_halalas INTEGER NOT NULL CHECK(sale_price_halalas>=0), quantity REAL, unit TEXT NOT NULL DEFAULT 'حبة', low_stock_limit REAL NOT NULL DEFAULT 5, is_active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL)');
         await db.execute('CREATE INDEX idx_products_name ON products(name)');
         await db.execute('CREATE INDEX idx_products_barcode ON products(barcode)');
         await db.execute("CREATE TABLE invoices(id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_no TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL, payment_method TEXT NOT NULL CHECK(payment_method IN ('cash','network')), total_halalas INTEGER NOT NULL CHECK(total_halalas>=0), status TEXT NOT NULL DEFAULT 'completed', note TEXT)");
-        await db.execute('CREATE TABLE invoice_items(id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_id INTEGER NOT NULL REFERENCES invoices(id), product_id INTEGER REFERENCES products(id), product_name TEXT NOT NULL, quantity REAL NOT NULL CHECK(quantity>0), unit_price_halalas INTEGER NOT NULL, line_total_halalas INTEGER NOT NULL, returned_quantity REAL NOT NULL DEFAULT 0)');
+        await db.execute('CREATE TABLE invoice_items(id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_id INTEGER NOT NULL REFERENCES invoices(id), product_id INTEGER REFERENCES products(id), product_name TEXT NOT NULL, quantity REAL NOT NULL CHECK(quantity>0), unit TEXT NOT NULL DEFAULT 'حبة', unit_price_halalas INTEGER NOT NULL, line_total_halalas INTEGER NOT NULL, returned_quantity REAL NOT NULL DEFAULT 0)');
         await db.execute('CREATE TABLE returns(id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_id INTEGER NOT NULL REFERENCES invoices(id), created_at TEXT NOT NULL, payment_method TEXT NOT NULL, total_halalas INTEGER NOT NULL, reason TEXT)');
         await db.execute('CREATE TABLE return_items(id INTEGER PRIMARY KEY AUTOINCREMENT, return_id INTEGER NOT NULL REFERENCES returns(id), invoice_item_id INTEGER NOT NULL REFERENCES invoice_items(id), quantity REAL NOT NULL, amount_halalas INTEGER NOT NULL)');
         await db.execute('CREATE TABLE cash_transactions(id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, type TEXT NOT NULL, amount_halalas INTEGER NOT NULL, reference_type TEXT, reference_id INTEGER, note TEXT)');
@@ -33,6 +33,10 @@ class LocalDatabase {
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if(oldVersion<2) await db.execute('ALTER TABLE expenses ADD COLUMN transaction_id INTEGER');
+        if(oldVersion<3) {
+          await db.execute("ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'حبة'");
+          await db.execute("ALTER TABLE invoice_items ADD COLUMN unit TEXT NOT NULL DEFAULT 'حبة'");
+        }
       });
     await ensureDefaultUser();
     return _db!;
@@ -102,7 +106,7 @@ class LocalDatabase {
         final qty=(item['quantity'] as num).toDouble();
         final productId=item['product_id'] as int;
         final line=(qty*(item['unit_price_halalas'] as int)).round();
-        final itemId=await txn.insert('invoice_items',{'invoice_id':invoiceId,'product_id':productId,'product_name':item['product_name'],'quantity':qty,'unit_price_halalas':item['unit_price_halalas'],'line_total_halalas':line});
+        final itemId=await txn.insert('invoice_items',{'invoice_id':invoiceId,'product_id':productId,'product_name':item['product_name'],'quantity':qty,'unit':item['unit']??'حبة','unit_price_halalas':item['unit_price_halalas'],'line_total_halalas':line});
         if(stockEnabled) {
           await txn.rawUpdate('UPDATE products SET quantity=quantity-? WHERE id=?',[qty,productId]);
           await txn.insert('stock_movements',{'product_id':productId,'created_at':now,'type':'sale','quantity':-qty,'reference_type':'invoice_item','reference_id':itemId});
