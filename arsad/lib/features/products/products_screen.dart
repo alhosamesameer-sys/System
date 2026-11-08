@@ -18,19 +18,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final barcode=TextEditingController(text:item?['barcode'] as String? ?? '');
     final price=TextEditingController(text:item==null?'':((item['sale_price_halalas'] as int)/100).toStringAsFixed(2));
     final qty=TextEditingController(text:item?['quantity']?.toString() ?? '');
-    final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
+    String unit=item?['unit'] as String? ?? 'حبة';
+    final ok=await showDialog<bool>(context:context,builder:(c)=>StatefulBuilder(builder:(c,setDialog)=>AlertDialog(
       title:Text(item==null?'إضافة صنف':'تعديل صنف'),
       content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
         TextField(controller:name,decoration:const InputDecoration(labelText:'اسم الصنف')),
         TextField(controller:barcode,decoration:InputDecoration(labelText:'الباركود',suffixIcon:IconButton(tooltip:'مسح الباركود بالكاميرا',icon:const Icon(Icons.qr_code_scanner),onPressed:()async{final code=await scanCode();if(code!=null){barcode.text=code;}}))),
+        DropdownButtonFormField<String>(value:unit,decoration:const InputDecoration(labelText:'الوحدة'),items:['حبة','باكت','كرتون','علبة','كيلو','جرام','لتر','متر'].map((u)=>DropdownMenuItem(value:u,child:Text(u))).toList(),onChanged:(v){if(v!=null)setDialog(()=>unit=v);}),
         TextField(controller:price,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'سعر البيع (ر.س)')),
         TextField(controller:qty,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية (اختياري)')),
       ])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('حفظ'))]));
+      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('حفظ'))])));
     if(ok!=true)return;
     try {
       final db=await LocalDatabase.instance.database;
-      final data={'name':name.text.trim(),'barcode':barcode.text.trim().isEmpty?null:barcode.text.trim(),'sale_price_halalas':Money.parseHalalas(price.text),'quantity':qty.text.trim().isEmpty?null:double.parse(qty.text),'created_at':DateTime.now().toIso8601String()};
+      final data={'name':name.text.trim(),'barcode':barcode.text.trim().isEmpty?null:barcode.text.trim(),'sale_price_halalas':Money.parseHalalas(price.text),'unit':unit,'quantity':qty.text.trim().isEmpty?null:double.parse(qty.text),'created_at':DateTime.now().toIso8601String()};
       if(data['name']=='' )throw Exception('اسم الصنف مطلوب');
       if(item==null){await db.insert('products',data);}else{await db.update('products',data,where:'id=?',whereArgs:[item['id']]);}
       if(mounted)setState((){});
