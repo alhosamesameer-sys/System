@@ -50,6 +50,19 @@ class _CashScreenState extends State<CashScreen> {
         OutlinedButton(onPressed:()=>addMovement(table,'expense'),child:const Text('مصروف')),
         if(network)OutlinedButton(onPressed:()=>addMovement(table,'bank_fee'),child:const Text('رسوم بنكية')),
       ]),
+      const Divider(),
+      const Align(alignment:Alignment.centerRight,child:Text('آخر الحركات',style:TextStyle(fontWeight:FontWeight.bold))),
+      FutureBuilder<List<Map<String,Object?>>>(future:LocalDatabase.instance.database.then((db)=>db.query(table,orderBy:'id DESC',limit:30)),builder:(context,snapshot){
+        if(!snapshot.hasData)return const Padding(padding:EdgeInsets.all(12),child:LinearProgressIndicator());
+        if(snapshot.data!.isEmpty)return const Padding(padding:EdgeInsets.all(12),child:Text('لا توجد حركات مسجلة'));
+        return Column(children:snapshot.data!.map((row){
+          final type=row['type'] as String;
+          final positive={'opening','sale','deposit','adjustment_in'}.contains(type);
+          final label=switch(type){'opening'=>'رصيد افتتاحي','sale'=>'مبيعات','deposit'=>'إيداع','withdrawal'=>'سحب','expense'=>'مصروف','bank_fee'=>'رسوم بنكية','return'=>'مردود','adjustment_in'=>'تسوية إضافة','adjustment_out'=>'تسوية خصم',_=>type};
+          final amount=(row['amount_halalas'] as num).toInt();
+          return ListTile(dense:true,leading:Icon(positive?Icons.arrow_downward:Icons.arrow_upward,color:positive?Colors.green:Colors.red),title:Text(label),subtitle:Text('${row['created_at']}${(row['note'] as String? ?? '').isEmpty?'':' • ${row['note']}'}'),trailing:Text('${positive?'+':'−'}${Money.format(amount)}',style:TextStyle(color:positive?Colors.green:Colors.red,fontWeight:FontWeight.bold)));
+        }).toList());
+      }),
     ])),
   );
 }
