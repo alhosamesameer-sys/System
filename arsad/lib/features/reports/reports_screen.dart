@@ -34,7 +34,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'صافي حركة الصندوق,${d['cash_net']}',
       'صافي حركة الشبكة,${d['network_net']}',
     ];
-    await Share.shareXFiles([XFile.fromData(utf8.encode(lines.join('\\n')),mimeType:'text/csv',name:'arsad-report.csv')],text:'تقرير أرصد');
+    await Share.shareXFiles([XFile.fromData(utf8.encode(lines.join('\n')),mimeType:'text/csv',name:'arsad-report.csv')],text:'تقرير أرصد');
   }
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('التقارير')),
