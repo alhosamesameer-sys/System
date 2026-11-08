@@ -27,7 +27,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
         invoice=found.first;items=lines;qty.clear();
         for(final item in lines){qty[item['id'] as int]=TextEditingController(text:'0');}
       });
-      if(found.first['status']=='fully_returned')throw Exception('هذه الفاتورة مرتجعة بالكامل');
+      if(found.first['status']=='fully_returned'){if(mounted)setState(()=>invoice=null);throw Exception('هذه الفاتورة مرتجعة بالكامل');}
     } catch(e) {if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}
     finally {if(mounted)setState(()=>loading=false);}
   }
