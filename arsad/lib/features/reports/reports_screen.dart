@@ -1,5 +1,71 @@
-import 'package:flutter/material.dart';import '../../core/money.dart';import '../../data/local_database.dart';
-class ReportsScreen extends StatefulWidget{const ReportsScreen({super.key});@override State<ReportsScreen> createState()=>_ReportsScreenState();}
-class _ReportsScreenState extends State<ReportsScreen>{String period='يومي';DateTimeRange? range;DateTimeRange get dates{final n=DateTime.now();if(range!=null)return range!;if(period=='شهري')return DateTimeRange(start:DateTime(n.year,n.month,1),end:DateTime(n.year,n.month+1,1));if(period=='سنوي')return DateTimeRange(start:DateTime(n.year),end:DateTime(n.year+1));if(period=='أسبوعي')return DateTimeRange(start:n.subtract(Duration(days:n.weekday-1)),end:n.add(Duration(days:8-n.weekday)));return DateTimeRange(start:DateTime(n.year,n.month,n.day),end:DateTime(n.year,n.month,n.day+1));}
-@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('التقارير')),body:Column(children:[Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:6,children:['يومي','أسبوعي','شهري','سنوي'].map((x)=>ChoiceChip(label:Text(x),selected:period==x&&range==null,onSelected:(_)=>setState((){period=x;range=null;})).toList())),Expanded(child:FutureBuilder<Map<String,Object?>>(future:LocalDatabase.instance.dashboardTotals(dates.start,dates.end),builder:(c,s)=>!s.hasData?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(16),children:[_row('إجمالي المبيعات',s.data!['sales_total']),_row('المبيعات النقدية',s.data!['cash_total']),_row('مبيعات الشبكة',s.data!['network_total']),_row('عدد الفواتير',s.data!['invoice_count'])])))]));}
-Widget _row(String title,Object? value)=>Card(child:ListTile(title:Text(title),trailing:Text(value is num&&title!='عدد الفواتير'?Money.format(value.toInt()):'$value')));}
+import 'package:flutter/material.dart';
+import '../../core/money.dart';
+import '../../data/local_database.dart';
+
+class ReportsScreen extends StatefulWidget {
+  const ReportsScreen({super.key});
+  @override State<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends State<ReportsScreen> {
+  String period = 'يومي';
+  DateTimeRange? customRange;
+
+  DateTimeRange get dates {
+    final now = DateTime.now();
+    if (customRange != null) return customRange!;
+    if (period == 'شهري') return DateTimeRange(start: DateTime(now.year, now.month, 1), end: DateTime(now.year, now.month + 1, 1));
+    if (period == 'سنوي') return DateTimeRange(start: DateTime(now.year), end: DateTime(now.year + 1));
+    if (period == 'أسبوعي') return DateTimeRange(start: DateTime(now.year, now.month, now.day - (now.weekday - 1)), end: DateTime(now.year, now.month, now.day - (now.weekday - 1) + 7));
+    return DateTimeRange(start: DateTime(now.year, now.month, now.day), end: DateTime(now.year, now.month, now.day + 1));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('التقارير')),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          spacing: 6,
+          children: ['يومي', 'أسبوعي', 'شهري', 'سنوي'].map((value) => ChoiceChip(
+            label: Text(value),
+            selected: period == value && customRange == null,
+            onSelected: (_) => setState(() { period = value; customRange = null; }),
+          )).toList(),
+        ),
+      ),
+      TextButton.icon(
+        onPressed: () async {
+          final now = DateTime.now();
+          final picked = await showDateRangePicker(context: context, firstDate: DateTime(2020), lastDate: DateTime(now.year + 2), initialDateRange: dates);
+          if (picked != null && mounted) setState(() { customRange = picked; });
+        },
+        icon: const Icon(Icons.date_range),
+        label: const Text('تحديد فترة مخصصة'),
+      ),
+      Expanded(
+        child: FutureBuilder<Map<String,Object?>>(
+          future: LocalDatabase.instance.dashboardTotals(dates.start, dates.end),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            final data = snapshot.data!;
+            return ListView(padding: const EdgeInsets.all(16), children: [
+              _row('إجمالي المبيعات', data['sales_total']),
+              _row('المبيعات النقدية', data['cash_total']),
+              _row('مبيعات الشبكة', data['network_total']),
+              _row('عدد الفواتير', data['invoice_count']),
+            ]);
+          },
+        ),
+      ),
+    ]),
+  );
+
+  Widget _row(String title, Object? value) => Card(
+    child: ListTile(
+      title: Text(title),
+      trailing: Text(title == 'عدد الفواتير' ? '$value' : Money.format((value as num).toInt())),
+    ),
+  );
+}
