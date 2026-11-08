@@ -36,7 +36,7 @@ class LocalDatabase {
   }
 
   String passwordHash(String password) {
-    var bytes = utf8.encode('ARSAD-local-v1-7c9d:$password');
+    List<int> bytes = utf8.encode('ARSAD-local-v1-7c9d:$password');
     for (var i=0;i<12000;i++) { bytes = sha256.convert(bytes).bytes; }
     return base64UrlEncode(bytes);
   }
