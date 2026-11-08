@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:excel/excel.dart' hide TextSpan;
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart' as pdf;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import '../data/local_database.dart';
@@ -36,7 +37,7 @@ class StatementExporter {
           periodLabel: periodLabel, totalRows: rows.length,
         );
         doc.addPage(pw.Page(
-          pageFormat: pw.PageFormat.a4,
+          pageFormat: pdf.PdfPageFormat.a4,
           build: (_) => pw.Directionality(
             textDirection: pw.TextDirection.rtl,
             child: pw.Image(pw.MemoryImage(png), fit: pw.BoxFit.contain),
