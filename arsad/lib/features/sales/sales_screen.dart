@@ -27,7 +27,12 @@ class _SalesScreenState extends State<SalesScreen> {
   }
   Future<void> scan() async {
     final code = await Navigator.push<String>(context, MaterialPageRoute(builder: (_) => const BarcodeScreen()));
-    if (code != null && mounted) {\n      final db=await LocalDatabase.instance.database;\n      final found=await db.query('products',where:'barcode=? AND is_active=1',whereArgs:[code],limit:1);\n      if(!mounted)return;\n      if(found.isNotEmpty){add(found.first);}else{search.text=code;setState((){});}\n    }
+    if (code != null && mounted) {
+      final db=await LocalDatabase.instance.database;
+      final found=await db.query('products',where:'barcode=? AND is_active=1',whereArgs:[code],limit:1);
+      if(!mounted)return;
+      if(found.isNotEmpty){add(found.first);}else{search.text=code;setState((){});}
+    }
   }
   Future<void> editPrice(int id) async {
     final item=cart[id]; if(item==null)return;
