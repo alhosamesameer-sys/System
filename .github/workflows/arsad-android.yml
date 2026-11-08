@@ -36,7 +36,13 @@ jobs:
           import re
 
           root = Path("android")
-          targets = set(root.rglob("build.gradle")) | set(root.rglob("build.gradle.kts"))
+          targets = set()
+          # Only app and plugin modules have an Android configuration block.
+          for name in ("build.gradle", "build.gradle.kts"):
+              app_gradle = root / "app" / name
+              if app_gradle.exists():
+                  targets.add(app_gradle)
+
           metadata = Path(".flutter-plugins-dependencies")
           if metadata.exists():
               data = json.loads(metadata.read_text(encoding="utf-8"))
@@ -47,32 +53,21 @@ jobs:
                       targets.update(plugin_android.rglob("build.gradle.kts"))
 
           if not targets:
-              raise SystemExit("No Android Gradle build files found")
+              raise SystemExit("No Android app or plugin Gradle files found")
 
           changed = []
           unresolved = []
           for path in sorted(targets):
               source = path.read_text(encoding="utf-8")
               updated = source
-              # Normalize Groovy and Kotlin DSL declarations, including Flutter defaults.
-              updated = re.sub(
-                  r"(?m)^(\s*)compileSdkVersion\s+[^\n]+",
-                  r"\g<1>compileSdkVersion 36", updated
-              )
-              updated = re.sub(
-                  r"(?m)^(\s*)compileSdk\s*=\s*[^\n]+",
-                  r"\g<1>compileSdk = 36", updated
-              )
-              updated = re.sub(
-                  r"(?m)^(\s*)compileSdk\s+[^\n]+",
-                  r"\g<1>compileSdk 36", updated
-              )
-              if not re.search(r"(?m)^\s*compileSdk(?:Version)?(?:\s*=)?\s*36\b", updated):
-                  if re.search(r"(?m)^\s*android\s*\{", updated):
-                      updated = re.sub(
-                          r"(?m)^(\s*)android\s*\{",
-                          r"\g<0>\n    compileSdk = 36", updated, count=1
-                      )
+              updated = re.sub(r"(?m)^(\\s*)compileSdkVersion\\s+[^\\n]+", r"\\g<1>compileSdkVersion 36", updated)
+              updated = re.sub(r"(?m)^(\\s*)compileSdk\\s*=\\s*[^\\n]+", r"\\g<1>compileSdk = 36", updated)
+              updated = re.sub(r"(?m)^(\\s*)compileSdk\\s+[^\\n]+", r"\\g<1>compileSdk 36", updated)
+              if not re.search(r"(?m)^\\s*compileSdk(?:Version)?(?:\\s*=)?\\s*36\\b", updated):
+                  block = re.search(r"(?m)^\\s*android\\s*\\{", updated)
+                  if block:
+                      indent = re.match(r"\\s*", block.group(0)).group(0) + "    "
+                      updated = updated[:block.end()] + "\\n" + indent + "compileSdk = 36" + updated[block.end():]
                   else:
                       unresolved.append(str(path))
               if updated != source:
@@ -80,7 +75,7 @@ jobs:
                   changed.append(str(path))
 
           print("Configured compile SDK 36 in:")
-          print("\n".join(changed) if changed else "(no changes required)")
+          print("\\n".join(changed) if changed else "(no changes required)")
           if unresolved:
               raise SystemExit("Could not configure compile SDK in: " + ", ".join(unresolved))
           PY
