@@ -141,7 +141,8 @@ class LocalDatabase {
         final qty=row['qty'] as double;
         await txn.insert('return_items',{'return_id':returnId,'invoice_item_id':item['id'],'quantity':qty,'amount_halalas':row['amount']});
         await txn.rawUpdate('UPDATE invoice_items SET returned_quantity=returned_quantity+? WHERE id=?',[qty,item['id']]);
-        final originalStockMovements=await txn.query('stock_movements',where:'type=? AND reference_type=? AND reference_id=?',whereArgs:['sale','invoice_item',item['id']],limit:1);\n        if(originalStockMovements.isNotEmpty && item['product_id']!=null) {
+        final originalStockMovements=await txn.query('stock_movements',where:'type=? AND reference_type=? AND reference_id=?',whereArgs:['sale','invoice_item',item['id']],limit:1);
+        if(originalStockMovements.isNotEmpty && item['product_id']!=null) {
           await txn.rawUpdate('UPDATE products SET quantity=COALESCE(quantity,0)+? WHERE id=?',[qty,item['product_id']]);
           await txn.insert('stock_movements',{'product_id':item['product_id'],'created_at':now,'type':'return','quantity':qty,'reference_type':'return','reference_id':returnId});
         }
