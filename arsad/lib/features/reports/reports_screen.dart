@@ -38,7 +38,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final args = [range.start.toIso8601String(), range.end.toIso8601String()];
     if (kind == 'count') {
       return db.rawQuery(
-        'SELECT invoice_no AS ref, created_at AS date, payment_method AS detail, total_halalas AS amount, \'فاتورة\' AS item, 1 AS quantity, total_halalas AS unit_price FROM invoices WHERE created_at>=? AND created_at<? ORDER BY created_at DESC',
+        'SELECT invoice_no AS ref, created_at AS date, payment_method AS detail, total_halalas AS amount, \'فاتورة\' AS item, 1 AS quantity, total_halalas AS unit_price FROM invoices WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?) ORDER BY created_at DESC',
         args,
       );
     }
@@ -46,31 +46,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final filter = kind == 'cash' ? "AND invoices.payment_method='cash'"
         : kind == 'network' ? "AND invoices.payment_method='network'" : '';
       return db.rawQuery(
-        'SELECT invoices.invoice_no AS ref, invoices.created_at AS date, invoice_items.product_name AS item, invoice_items.quantity AS quantity, invoice_items.unit_price_halalas AS unit_price, invoice_items.line_total_halalas AS amount, invoices.payment_method AS detail FROM invoice_items JOIN invoices ON invoices.id=invoice_items.invoice_id WHERE invoices.created_at>=? AND invoices.created_at<? $filter ORDER BY invoices.created_at DESC, invoice_items.id',
+        'SELECT invoices.invoice_no AS ref, invoices.created_at AS date, invoice_items.product_name AS item, invoice_items.quantity AS quantity, invoice_items.unit_price_halalas AS unit_price, invoice_items.line_total_halalas AS amount, invoices.payment_method AS detail FROM invoice_items JOIN invoices ON invoices.id=invoice_items.invoice_id WHERE datetime(invoices.created_at)>=datetime(?) AND datetime(invoices.created_at)<datetime(?) $filter ORDER BY invoices.created_at DESC, invoice_items.id',
         args,
       );
     }
     if (kind == 'returns') {
       return db.rawQuery(
-        'SELECT invoices.invoice_no AS ref, returns.created_at AS date, invoice_items.product_name AS item, return_items.quantity AS quantity, invoice_items.unit_price_halalas AS unit_price, return_items.amount_halalas AS amount, COALESCE(returns.reason, \'مردود\') AS detail FROM return_items JOIN returns ON returns.id=return_items.return_id JOIN invoice_items ON invoice_items.id=return_items.invoice_item_id JOIN invoices ON invoices.id=returns.invoice_id WHERE returns.created_at>=? AND returns.created_at<? ORDER BY returns.created_at DESC',
+        'SELECT invoices.invoice_no AS ref, returns.created_at AS date, invoice_items.product_name AS item, return_items.quantity AS quantity, invoice_items.unit_price_halalas AS unit_price, return_items.amount_halalas AS amount, COALESCE(returns.reason, \'مردود\') AS detail FROM return_items JOIN returns ON returns.id=return_items.return_id JOIN invoice_items ON invoice_items.id=return_items.invoice_item_id JOIN invoices ON invoices.id=returns.invoice_id WHERE datetime(returns.created_at)>=datetime(?) AND datetime(returns.created_at)<datetime(?) ORDER BY returns.created_at DESC',
         args,
       );
     }
     if (kind == 'net') {
       return db.rawQuery(
-        "SELECT invoices.invoice_no AS ref,invoices.created_at AS date,invoice_items.product_name AS item,invoice_items.quantity AS quantity,invoice_items.unit_price_halalas AS unit_price,invoice_items.line_total_halalas AS amount,'مبيعات' AS detail FROM invoice_items JOIN invoices ON invoices.id=invoice_items.invoice_id WHERE invoices.created_at>=? AND invoices.created_at<? UNION ALL SELECT invoices.invoice_no,returns.created_at,invoice_items.product_name,return_items.quantity,invoice_items.unit_price_halalas,-return_items.amount_halalas,'مرتجع' FROM return_items JOIN returns ON returns.id=return_items.return_id JOIN invoice_items ON invoice_items.id=return_items.invoice_item_id JOIN invoices ON invoices.id=returns.invoice_id WHERE returns.created_at>=? AND returns.created_at<? ORDER BY date DESC",
+        "SELECT invoices.invoice_no AS ref,invoices.created_at AS date,invoice_items.product_name AS item,invoice_items.quantity AS quantity,invoice_items.unit_price_halalas AS unit_price,invoice_items.line_total_halalas AS amount,'مبيعات' AS detail FROM invoice_items JOIN invoices ON invoices.id=invoice_items.invoice_id WHERE datetime(invoices.created_at)>=datetime(?) AND datetime(invoices.created_at)<datetime(?) UNION ALL SELECT invoices.invoice_no,returns.created_at,invoice_items.product_name,return_items.quantity,invoice_items.unit_price_halalas,-return_items.amount_halalas,'مرتجع' FROM return_items JOIN returns ON returns.id=return_items.return_id JOIN invoice_items ON invoice_items.id=return_items.invoice_item_id JOIN invoices ON invoices.id=returns.invoice_id WHERE datetime(returns.created_at)>=datetime(?) AND datetime(returns.created_at)<datetime(?) ORDER BY date DESC",
         [...args, ...args],
       );
     }
     if (kind == 'expenses') {
       return db.rawQuery(
-        "SELECT CAST(id AS TEXT) AS ref,created_at AS date,title AS item,1 AS quantity,amount_halalas AS unit_price,amount_halalas AS amount,COALESCE(note,'مصروف') AS detail FROM expenses WHERE created_at>=? AND created_at<? ORDER BY created_at DESC",
+        "SELECT CAST(id AS TEXT) AS ref,created_at AS date,title AS item,1 AS quantity,amount_halalas AS unit_price,amount_halalas AS amount,COALESCE(note,'مصروف') AS detail FROM expenses WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?) ORDER BY created_at DESC",
         args,
       );
     }
     final table = kind == 'cashflow' ? 'cash_transactions' : 'network_transactions';
     return db.rawQuery(
-      "SELECT CAST(id AS TEXT) AS ref,created_at AS date,CASE type WHEN 'opening' THEN 'رصيد افتتاحي' WHEN 'sale' THEN 'مبيعات' WHEN 'deposit' THEN 'إيداع' WHEN 'withdrawal' THEN 'سحب' WHEN 'expense' THEN 'مصروف' WHEN 'bank_fee' THEN 'رسوم بنكية' WHEN 'return' THEN 'مردود' WHEN 'adjustment_in' THEN 'تسوية إضافة' WHEN 'adjustment_out' THEN 'تسوية خصم' ELSE type END AS item,1 AS quantity,amount_halalas AS unit_price,CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END AS amount,COALESCE(note,type) AS detail FROM $table WHERE created_at>=? AND created_at<? ORDER BY created_at DESC",
+      "SELECT CAST(id AS TEXT) AS ref,created_at AS date,CASE type WHEN 'opening' THEN 'رصيد افتتاحي' WHEN 'sale' THEN 'مبيعات' WHEN 'deposit' THEN 'إيداع' WHEN 'withdrawal' THEN 'سحب' WHEN 'expense' THEN 'مصروف' WHEN 'bank_fee' THEN 'رسوم بنكية' WHEN 'return' THEN 'مردود' WHEN 'adjustment_in' THEN 'تسوية إضافة' WHEN 'adjustment_out' THEN 'تسوية خصم' ELSE type END AS item,1 AS quantity,amount_halalas AS unit_price,CASE WHEN type IN ('opening','sale','deposit','adjustment_in') THEN amount_halalas ELSE -amount_halalas END AS amount,COALESCE(note,type) AS detail FROM $table WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?) ORDER BY created_at DESC",
       args,
     );
   }
@@ -111,8 +111,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 final amount = (row['amount'] as num).toInt();
                 return ListTile(
                   dense: true,
-                  title: Text(row['detail']?.toString() ?? ''),
-                  subtitle: Text('${row['date']} • مرجع ${row['ref']}'),
+                  title: Text(row['item']?.toString().trim().isNotEmpty == true ? row['item'].toString() : 'حركة مالية'),
+                  subtitle: Text('${row['date']} • ${row['detail'] ?? '—'} • الكمية: ${row['quantity'] ?? 1} • مرجع ${row['ref']}'),
                   trailing: Text(amount < 0 ? '-${Money.format(-amount)}' : Money.format(amount)),
                 );
               },
