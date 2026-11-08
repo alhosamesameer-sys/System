@@ -9,11 +9,12 @@ class _ReportsScreenState extends State<ReportsScreen>{
  Future<List<Map<String,Object?>>> detail(String kind)async{final db=await LocalDatabase.instance.database;final a=[range.start.toIso8601String(),range.end.toIso8601String()];
  if(kind=='sales'||kind=='cash'||kind=='network')return db.rawQuery("SELECT invoice_no ref,created_at date,payment_method detail,total_halalas amount FROM invoices WHERE created_at>=? AND created_at<? "+(kind=='cash'?"AND payment_method='cash'":kind=='network'?"AND payment_method='network'":'')+" ORDER BY created_at DESC",a);
  if(kind=='returns')return db.rawQuery('SELECT invoices.invoice_no ref,returns.created_at date,returns.reason detail,returns.total_halalas amount FROM returns JOIN invoices ON invoices.id=returns.invoice_id WHERE returns.created_at>=? AND returns.created_at<? ORDER BY returns.created_at DESC',a);
+ if(kind=='net')return db.rawQuery("SELECT invoice_no ref,created_at date,'مبيعات' detail,total_halalas amount FROM invoices WHERE created_at>=? AND created_at<? UNION ALL SELECT CAST(id AS TEXT),created_at,'مرتجع',-total_halalas FROM returns WHERE created_at>=? AND created_at<? ORDER BY date DESC",[...a,...a]);
  if(kind=='expenses')return db.rawQuery('SELECT id ref,created_at date,title detail,amount_halalas amount FROM expenses WHERE created_at>=? AND created_at<? ORDER BY created_at DESC',a);
  final table=kind=='cashflow'?'cash_transactions':'network_transactions';return db.rawQuery('SELECT id ref,created_at date,COALESCE(note,type) detail,amount_halalas amount,type FROM '+table+' WHERE created_at>=? AND created_at<? ORDER BY created_at DESC',a);
  }
  Future<void> openStatement(String title,String kind)async{final rows=await detail(kind);if(!mounted)return;if(rows.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا توجد تفاصيل في هذه الفترة')));return;}
- final data=rows.map((r)=>[r['date'].toString(),r['ref'].toString(),r['detail']?.toString()??'',Money.format((r['amount'] as num).toInt())]).toList();
+ final data=rows.map((r){final amount=(r['amount'] as num).toInt();return [r['date'].toString(),r['ref'].toString(),r['detail']?.toString()??'',amount<0?'-${Money.format(-amount)}':Money.format(amount)];}).toList();
  await showDialog<void>(context:context,builder:(d)=>AlertDialog(title:Text('كشف '+title),content:SizedBox(width:double.maxFinite,height:420,child:Column(children:[Text('عدد السجلات: '+rows.length.toString()),const Divider(),Expanded(child:ListView.builder(itemCount:rows.length,itemBuilder:(c,i)=>ListTile(dense:true,title:Text(rows[i]['detail']?.toString()??''),subtitle:Text(rows[i]['date'].toString()),trailing:Text(Money.format((rows[i]['amount'] as num).toInt())))))])),actions:[
  TextButton(onPressed:()=>Navigator.pop(d),child:const Text('إغلاق')),
  OutlinedButton(onPressed:()async{Navigator.pop(d);await StatementExporter.export(title:'كشف '+title,headers:['التاريخ','المرجع','البيان','المبلغ'],rows:data,asPdf:true);},child:const Text('PDF')),
@@ -27,7 +28,7 @@ class _ReportsScreenState extends State<ReportsScreen>{
  _metric('المبيعات النقدية',d['cash_total'],Icons.payments,Colors.green,'cash'),
  _metric('مبيعات الشبكة',d['network_total'],Icons.credit_card,Colors.teal,'network'),
  _metric('إجمالي المرتجعات',d['returns_total'],Icons.assignment_return,Colors.red,'returns'),
- _metric('صافي المبيعات',d['net_sales_total'],Icons.trending_up,Colors.indigo,'sales'),
+ _metric('صافي المبيعات',d['net_sales_total'],Icons.trending_up,Colors.indigo,'net'),
  _metric('المصروفات',d['expenses_total'],Icons.money_off,Colors.orange,'expenses'),
  _metric('حركة الصندوق',d['cash_net'],Icons.account_balance_wallet,Colors.blueGrey,'cashflow'),
  _metric('حركة الشبكة والبنك',d['network_net'],Icons.account_balance,Colors.teal,'networkflow'),
