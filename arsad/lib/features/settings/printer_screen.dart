@@ -20,7 +20,8 @@ class _PrinterScreenState extends State<PrinterScreen> {
       final db=await LocalDatabase.instance.database;
       final rows=await db.query('app_settings',where:'key IN (?,?)',whereArgs:['printer_address','printer_paper']);
       for(final row in rows){if(row['key']=='printer_address')selected=row['value'] as String;if(row['key']=='printer_paper')paper=int.tryParse(row['value'] as String)??58;}
-      devices=await ThermalPrinterService.bondedDevices();\n      if(selected!=null && !devices.any((device)=>device['address']==selected))selected=null;
+      devices=await ThermalPrinterService.bondedDevices();
+      if(selected!=null && !devices.any((device)=>device['address']==selected))selected=null;
     } catch(e){message='$e';}
     finally{if(mounted)setState(()=>loading=false);}
   }
@@ -35,7 +36,11 @@ class _PrinterScreenState extends State<PrinterScreen> {
 
   Future<void> testPrint() async {
     if(selected==null)throw Exception('اختر طابعة مقترنة أولاً');
-    final bytes=<int>[0x1B,0x40,...'ARSAD - TEST PRINT\nBluetooth ESC/POS\nPaper: $paper mm\n\n'.codeUnits,0x1D,0x56,0x41,0x03];
+    final bytes=<int>[0x1B,0x40,...'ARSAD - TEST PRINT
+Bluetooth ESC/POS
+Paper: $paper mm
+
+'.codeUnits,0x1D,0x56,0x41,0x03];
     await ThermalPrinterService.printBytes(address:selected!,bytes:bytes);
     if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم إرسال صفحة الاختبار إلى الطابعة')));
   }
