@@ -23,6 +23,20 @@ jobs:
           if [ ! -f android/settings.gradle ] && [ ! -f android/settings.gradle.kts ]; then
             flutter create --platforms=android --org com.arsad --project-name arsad .
           fi
+      - name: Configure Android compile SDK 36
+        working-directory: arsad
+        run: |
+          yes | sdkmanager --install "platforms;android-36"
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('android/app/build.gradle.kts')
+          s=p.read_text(encoding='utf-8')
+          s2=re.sub(r'compileSdk\\s*=\\s*flutter\\.compileSdkVersion', 'compileSdk = 36', s)
+          if s2 == s and 'compileSdk = 36' not in s:
+              raise SystemExit('Could not set compileSdk to 36 in android/app/build.gradle.kts')
+          p.write_text(s2, encoding='utf-8')
+          PY
       - name: Remove internet permission
         working-directory: arsad
         run: |
