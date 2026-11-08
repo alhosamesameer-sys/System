@@ -29,7 +29,7 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
         BarcodeFormat.code39,
         BarcodeFormat.code93,
         BarcodeFormat.codabar,
-        BarcodeFormat.itf,
+        BarcodeFormat.itf14,
         BarcodeFormat.qrCode,
       ],
     );
@@ -76,7 +76,7 @@ class _BarcodeScreenState extends State<BarcodeScreen> {
         body: MobileScanner(
           controller: controller,
           onDetect: onDetect,
-          errorBuilder: (context, error, child) => Center(
+          errorBuilder: (context, error) => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
