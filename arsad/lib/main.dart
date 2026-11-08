@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'core/theme.dart';
 import 'data/local_database.dart';
 import 'features/auth/login_screen.dart';
-import 'features/dashboard/dashboard_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,14 +21,6 @@ class ArsadApp extends StatelessWidget {
       textDirection: TextDirection.rtl,
       child: child ?? const SizedBox.shrink(),
     ),
-    home: FutureBuilder<bool>(
-      future: LocalDatabase.instance.hasUser(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        return snapshot.data == true ? const LoginScreen() : const LoginScreen();
-      },
-    ),
+    home: const LoginScreen(),
   );
 }
