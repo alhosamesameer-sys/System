@@ -56,7 +56,7 @@ class _ReturnsScreenState extends State<ReturnsScreen> {
     appBar:AppBar(title:const Text('المردودات')),
     body:Column(children:[
       Padding(padding:const EdgeInsets.all(12),child:TextField(controller:invoiceNo,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'ابحث برقم الفاتورة أو اسم الصنف'))),
-      if(invoice==null)Expanded(child:FutureBuilder<void>(future:loadInvoices(),builder:(context,snapshot){
+      if(invoice==null)Expanded(child:FutureBuilder<List<Map<String,Object?>>>(future:loadInvoices(),builder:(context,snapshot){
         if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
         if(!snapshot.hasData)return const Center(child:CircularProgressIndicator());
         final invoices=snapshot.data!;
