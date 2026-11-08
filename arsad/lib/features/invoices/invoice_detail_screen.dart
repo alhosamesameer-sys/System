@@ -18,7 +18,7 @@ class InvoiceDetailScreen extends StatelessWidget {
     final inv=data['invoice'] as Map<String,Object?>;
     final lines=data['items'] as List<Map<String,Object?>>;
     doc.addPage(pw.Page(build:(ctx)=>pw.Directionality(textDirection:pw.TextDirection.rtl,child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
-      pw.Text('أرصد | ARSAD',style:pw.TextStyle(fontSize:20)),
+      pw.Text('أرصد | ARSAD',style:const pw.TextStyle(fontSize:20)),
       pw.Text('فاتورة رقم: ${inv['invoice_no']}'),
       pw.Text('التاريخ: ${inv['created_at']}'),
       pw.Divider(),
