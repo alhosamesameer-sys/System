@@ -2,5 +2,51 @@ import 'package:flutter/material.dart';
 import '../../core/money.dart';
 import '../../data/local_database.dart';
 import 'invoice_detail_screen.dart';
-class InvoicesScreen extends StatefulWidget{const InvoicesScreen({super.key});@override State<InvoicesScreen> createState()=>_InvoicesScreenState();}
-class _InvoicesScreenState extends State<InvoicesScreen>{final q=TextEditingController();Future<List<Map<String,Object?>>> load()=>LocalDatabase.instance.database.then((d)=>d.query('invoices',where:'invoice_no LIKE ?',whereArgs:['%${q.text}%'],orderBy:'id DESC'));@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('الفواتير')),body:Column(children:[Padding(padding:const EdgeInsets.all(12),child:TextField(controller:q,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'ابحث برقم الفاتورة'))),Expanded(child:FutureBuilder<List<Map<String,Object?>>>(future:load(),builder:(c,s)=>!s.hasData?const Center(child:CircularProgressIndicator()):ListView(children:s.data!.map((x)=>Card(child:ListTile(title:Text('فاتورة ${x['invoice_no']}'),subtitle:Text('${x['created_at']} • ${x['payment_method']=='cash'?'نقد':'شبكة'}'),trailing:Text(Money.format(x['total_halalas'] as int)),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>InvoiceDetailScreen(invoiceId:x['id'] as int))))).toList())))]));}
+
+class InvoicesScreen extends StatefulWidget {
+  const InvoicesScreen({super.key});
+  @override State<InvoicesScreen> createState() => _InvoicesScreenState();
+}
+
+class _InvoicesScreenState extends State<InvoicesScreen> {
+  final query = TextEditingController();
+  Future<List<Map<String,Object?>>> load() async {
+    final db = await LocalDatabase.instance.database;
+    return db.query('invoices', where:'invoice_no LIKE ?', whereArgs:['%${query.text}%'], orderBy:'id DESC');
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('الفواتير')),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: TextField(controller: query, onChanged: (_) => setState(() {}), decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث برقم الفاتورة')),
+      ),
+      Expanded(
+        child: FutureBuilder<List<Map<String,Object?>>>(
+          future: load(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+            if (snapshot.data!.isEmpty) return const Center(child: Text('لا توجد فواتير'));
+            return ListView.builder(
+              itemCount: snapshot.data!.length,
+              itemBuilder: (context, index) {
+                final invoice = snapshot.data![index];
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.receipt_long),
+                    title: Text('فاتورة ${invoice['invoice_no']}'),
+                    subtitle: Text('${invoice['created_at']} • ${invoice['payment_method']=='cash'?'نقد':'شبكة'}'),
+                    trailing: Text(Money.format(invoice['total_halalas'] as int)),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => InvoiceDetailScreen(invoiceId: invoice['id'] as int))).then((_) { if (mounted) setState(() {}); }),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    ]),
+  );
+}
