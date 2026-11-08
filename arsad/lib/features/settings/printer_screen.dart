@@ -20,7 +20,7 @@ class _PrinterScreenState extends State<PrinterScreen> {
       final db=await LocalDatabase.instance.database;
       final rows=await db.query('app_settings',where:'key IN (?,?)',whereArgs:['printer_address','printer_paper']);
       for(final row in rows){if(row['key']=='printer_address')selected=row['value'] as String;if(row['key']=='printer_paper')paper=int.tryParse(row['value'] as String)??58;}
-      devices=await ThermalPrinterService.bondedDevices();
+      devices=await ThermalPrinterService.bondedDevices();\n      if(selected!=null && !devices.any((device)=>device['address']==selected))selected=null;
     } catch(e){message='$e';}
     finally{if(mounted)setState(()=>loading=false);}
   }
