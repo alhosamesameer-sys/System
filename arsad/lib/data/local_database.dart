@@ -130,7 +130,9 @@ class LocalDatabase {
         final item=found.first;
         final remaining=(item['quantity'] as num).toDouble()-(item['returned_quantity'] as num).toDouble();
         if(entry.value>remaining) throw Exception('تجاوزت الكمية القابلة للإرجاع');
-        final amount=(entry.value*(item['unit_price_halalas'] as int)).round();
+        final unitPrice=item['unit_price_halalas'] as int;
+        final alreadyReturned=(item['returned_quantity'] as num).toDouble();
+        final amount=((alreadyReturned+entry.value)*unitPrice).round()-(alreadyReturned*unitPrice).round();
         total+=amount;
         selected.add({'item':item,'qty':entry.value,'amount':amount});
       }
