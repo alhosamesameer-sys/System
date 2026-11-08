@@ -5,6 +5,9 @@ on:
       - 'arsad/**'
       - '.github/workflows/arsad-android.yml'
   workflow_dispatch:
+concurrency:
+  group: arsad-android-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
