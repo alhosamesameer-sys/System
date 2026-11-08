@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-class InvoicesScreen extends StatelessWidget {
- const InvoicesScreen({super.key});
- @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('الفواتير')), body: const Center(child: Text('واجهة قيد التطوير')));
-}
+import '../../core/money.dart';
+import '../../data/local_database.dart';
+import 'invoice_detail_screen.dart';
+class InvoicesScreen extends StatefulWidget{const InvoicesScreen({super.key});@override State<InvoicesScreen> createState()=>_InvoicesScreenState();}
+class _InvoicesScreenState extends State<InvoicesScreen>{final q=TextEditingController();Future<List<Map<String,Object?>>> load()=>LocalDatabase.instance.database.then((d)=>d.query('invoices',where:'invoice_no LIKE ?',whereArgs:['%${q.text}%'],orderBy:'id DESC'));@override Widget build(BuildContext c)=>Scaffold(appBar:AppBar(title:const Text('الفواتير')),body:Column(children:[Padding(padding:const EdgeInsets.all(12),child:TextField(controller:q,onChanged:(_)=>setState((){}),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'ابحث برقم الفاتورة'))),Expanded(child:FutureBuilder<List<Map<String,Object?>>>(future:load(),builder:(c,s)=>!s.hasData?const Center(child:CircularProgressIndicator()):ListView(children:s.data!.map((x)=>Card(child:ListTile(title:Text('فاتورة ${x['invoice_no']}'),subtitle:Text('${x['created_at']} • ${x['payment_method']=='cash'?'نقد':'شبكة'}'),trailing:Text(Money.format(x['total_halalas'] as int)),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>InvoiceDetailScreen(invoiceId:x['id'] as int))))).toList())))]));}
