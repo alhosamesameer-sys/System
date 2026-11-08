@@ -60,14 +60,14 @@ jobs:
           for path in sorted(targets):
               source = path.read_text(encoding="utf-8")
               updated = source
-              updated = re.sub(r"(?m)^(\\s*)compileSdkVersion\\s+[^\\n]+", r"\\g<1>compileSdkVersion 36", updated)
-              updated = re.sub(r"(?m)^(\\s*)compileSdk\\s*=\\s*[^\\n]+", r"\\g<1>compileSdk = 36", updated)
-              updated = re.sub(r"(?m)^(\\s*)compileSdk\\s+[^\\n]+", r"\\g<1>compileSdk 36", updated)
-              if not re.search(r"(?m)^\\s*compileSdk(?:Version)?(?:\\s*=)?\\s*36\\b", updated):
-                  block = re.search(r"(?m)^\\s*android\\s*\\{", updated)
+              updated = re.sub(r"(?m)^(\s*)compileSdkVersion\s+[^\n]+", r"\g<1>compileSdkVersion 36", updated)
+              updated = re.sub(r"(?m)^(\s*)compileSdk\s*=\s*[^\n]+", r"\g<1>compileSdk = 36", updated)
+              updated = re.sub(r"(?m)^(\s*)compileSdk\s+[^\n]+", r"\g<1>compileSdk 36", updated)
+              if not re.search(r"(?m)^\s*compileSdk(?:Version)?(?:\s*=)?\s*36\b", updated):
+                  block = re.search(r"(?m)^\s*android\s*\{", updated)
                   if block:
-                      indent = re.match(r"\\s*", block.group(0)).group(0) + "    "
-                      updated = updated[:block.end()] + "\\n" + indent + "compileSdk = 36" + updated[block.end():]
+                      indent = re.match(r"\s*", block.group(0)).group(0) + "    "
+                      updated = updated[:block.end()] + "\n" + indent + "compileSdk = 36" + updated[block.end():]
                   else:
                       unresolved.append(str(path))
               if updated != source:
@@ -75,7 +75,7 @@ jobs:
                   changed.append(str(path))
 
           print("Configured compile SDK 36 in:")
-          print("\\n".join(changed) if changed else "(no changes required)")
+          print("\n".join(changed) if changed else "(no changes required)")
           if unresolved:
               raise SystemExit("Could not configure compile SDK in: " + ", ".join(unresolved))
           PY
